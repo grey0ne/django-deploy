@@ -1,0 +1,77 @@
+name: ${PROJECT_NAME}
+
+services:
+  django:
+    command: python -m uvicorn --reload --lifespan off --host 0.0.0.0 --port 8000 application.asgi:application 
+    domainname: ${PROJECT_NAME}-django
+    image: ${PROJECT_NAME}-django
+    container_name: ${PROJECT_NAME}-django
+    build:
+      context: ${PROJECT_DIR}/backend
+    env_file:
+      - ${PROJECT_DIR}/environment/env.base
+      - ${PROJECT_DIR}/environment/env.dev
+    volumes:
+      - ${PROJECT_DIR}/backend:/app/src
+    depends_on:
+      - postgres
+    networks:
+      - app
+      - devnet
+
+  nextjs:
+    image: ${PROJECT_NAME}-nextjs
+    container_name: ${PROJECT_NAME}-nextjs
+    domainname: ${PROJECT_NAME}-nextjs
+    build:
+      context: ${PROJECT_DIR}/spa
+    env_file:
+      - ${PROJECT_DIR}/environment/env.base
+      - ${PROJECT_DIR}/environment/env.dev
+    volumes:
+      - ${PROJECT_DIR}/spa:/app
+    networks:
+      - app
+      - devnet
+
+  minio:
+    command: server /data --console-address ":9001"
+    image: "minio/minio:latest"
+    container_name: ${PROJECT_NAME}-minio
+    domainname: ${PROJECT_NAME}-minio
+    environment:
+      MINIO_ROOT_USER: minio_${PROJECT_NAME}
+      MINIO_ROOT_PASSWORD: minio_${PROJECT_NAME}
+    volumes:
+      - minio-data:/data
+    networks:
+      - app
+      - devnet
+
+  postgres:
+    image: "postgres:16.4-alpine"
+    container_name: ${PROJECT_NAME}-postgres
+    environment:
+      POSTGRES_PASSWORD: ${PROJECT_NAME}
+      POSTGRES_USER: ${PROJECT_NAME}
+      POSTGRES_DB: ${PROJECT_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app
+
+volumes:
+  postgres-data:
+    driver: local
+    name: ${PROJECT_NAME}-postgres-data
+  minio-data:
+    driver: local
+    name: ${PROJECT_NAME}-minio-data
+
+
+networks:
+  app:
+    name: ${PROJECT_NAME}
+  devnet:
+    name: devnet
+    external: true

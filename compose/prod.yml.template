@@ -1,0 +1,24 @@
+
+services:
+  ${PROJECT_NAME}-django:
+    image: ${DJANGO_IMAGE}
+    command: gunicorn -w ${DJANGO_WORKER_COUNT} -b 0.0.0.0:8000 -k application.worker.CustomUvicornWorker application.asgi
+    networks:
+      - prodnet
+    env_file:
+      - /app/${PROJECT_NAME}/env.base
+      - /app/${PROJECT_NAME}/env
+
+  ${PROJECT_NAME}-nextjs:
+    image: ${NEXTJS_IMAGE}
+    networks:
+      - prodnet
+    env_file:
+      - /app/${PROJECT_NAME}/env.base
+      - /app/${PROJECT_NAME}/env
+
+
+networks:
+  prodnet:
+    name: prodnet
+    external: true
