@@ -1,4 +1,5 @@
-from scripts.utils import request, save_env_option
+from scripts.http_request import request
+from scripts.helpers import print_status, save_env_option
 from scripts.constants import PROJECT_NAME
 import os
 
@@ -9,7 +10,7 @@ SENTRY_RELEASE_TOKEN = os.getenv('SENTRY_RELEASE_TOKEN')
 SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-django'))
 
 def sentry_release(version: str):
-    print(f'Sending verion {version} to Sentry')
+    print_status(f'Sending verion {version} to Sentry')
     if not SENTRY_RELEASE_TOKEN:
         raise ValueError('SENTRY_RELEASE_TOKEN is not set')
     headers = {
@@ -28,7 +29,7 @@ def sentry_release(version: str):
 
 def update_sentry_release():
     next_version = CURRENT_VERION + 1
-    print(f'Releasing version {next_version}')
+    print_status(f'Releasing version {next_version} of {PROJECT_NAME}')
     save_env_option('PROJECT_VERSION', str(next_version))
     save_env_option('NEXT_PUBLIC_VERSION', str(next_version))
     sentry_release(str(next_version))

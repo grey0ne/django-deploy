@@ -1,6 +1,6 @@
 from typing import Any
 import time
-from scripts.utils import request
+from scripts.http_request import request
 
 from scripts.do_constants import (
     DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, REGION, DROPLET_SIZE,

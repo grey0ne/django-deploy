@@ -1,7 +1,23 @@
 import subprocess
 from subprocess import PIPE
-from scripts.constants import PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR
+from scripts.constants import PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR, PROD_ENV_FILE
 from scripts.commands import RELOAD_NGINX
+import fileinput
+
+
+def save_env_option(option_name: str, value: str, env_file: str = PROD_ENV_FILE):
+    option_found = False
+    with fileinput.input(files=(env_file, ), encoding="utf-8", inplace=True) as f:
+        for line in f:
+            if f'{option_name}=' in line:
+                result = f'{option_name}={value}\n'
+                option_found=True
+            else:
+                result = line
+            print(result, end='')
+        if not option_found:
+            raise Exception('Option not found')
+
 
 def run_command(command: str):
     subprocess.run(command, shell=True, check=True)

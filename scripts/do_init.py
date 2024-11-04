@@ -6,7 +6,7 @@ from scripts.do_utils import (
     get_or_create_pg_user, get_or_create_pg_database, update_pg_firewall,
     DOException
 )
-from scripts.utils import save_env_option
+from scripts.helpers import save_env_option
 from scripts.constants import PROJECT_DOMAIN, PROJECT_NAME
 from scripts.do_constants import (
     DO_TOKEN, PROJECT_DESCRIPTION, DROPLET_NAME, PG_USERNAME,
