@@ -1,10 +1,9 @@
 from scripts.commands import (
-    INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS, COLLECT_STATIC_SCRIPT,
-    BUILD_IMAGES_SCRIPT, RELOAD_NGINX
+    INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS, RELOAD_NGINX
 )
 from scripts.helpers import (
     run_command, run_remote_commands, copy_to_remote, print_status, get_image_hash, update_swarm,
-    envsubst
+    envsubst, collect_static, upload_images, login_registry, build_images
 )
 from scripts.constants import (
     DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR, DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE
@@ -16,8 +15,10 @@ import os
 
 update_sentry_release()
 
-run_command(COLLECT_STATIC_SCRIPT)
-run_command(BUILD_IMAGES_SCRIPT)
+collect_static()
+build_images()
+login_registry()
+upload_images()
 
 os.environ['DJANGO_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
 os.environ['NEXTJS_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')

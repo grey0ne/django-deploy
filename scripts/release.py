@@ -10,7 +10,7 @@ SENTRY_RELEASE_TOKEN = os.getenv('SENTRY_RELEASE_TOKEN')
 SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-django'))
 
 def sentry_release(version: str):
-    print_status(f'Sending verion {version} to Sentry')
+    print_status(f'Sending verion {version} to Sentry. Projects {SENTRY_PROJECTS.replace(",", ", ")}')
     if not SENTRY_RELEASE_TOKEN:
         raise ValueError('SENTRY_RELEASE_TOKEN is not set')
     headers = {

@@ -1,7 +1,6 @@
 from scripts.constants import (
     REGISTRY_PASSWORD, REGISTRY_HOSTNAME, REGISTRY_USERNAME,
-    DOCKER_IMAGE_PREFIX, PROD_APP_PATH, PROJECT_NAME,
-    PROJECT_DIR, PROJECT_DOMAIN, PROD_ENV_FILE, BASE_ENV_FILE
+    DOCKER_IMAGE_PREFIX, PROD_APP_PATH, PROJECT_DOMAIN
 )
 
 PRINT_COMMAND = """
@@ -28,9 +27,9 @@ do
 done
 """
 
-LOGIN_REGISTRY = f"""
+LOGIN_REGISTRY_SCRIPT = f"""
 {PRINT_COMMAND}
-print_status "Login to registry"
+print_status "Login to registry {REGISTRY_HOSTNAME}"
 echo {REGISTRY_PASSWORD} | docker login {REGISTRY_HOSTNAME} --username {REGISTRY_USERNAME} --password-stdin
 """
 
@@ -45,7 +44,7 @@ fi
 
 PERFORM_MIGRATIONS = f"""
 {PRINT_COMMAND}
-print_status "Update image for migrations"
+print_status "Update django image for migrations"
 docker pull {DOCKER_IMAGE_PREFIX}-django
 print_status "Perform migrations"
 docker run --rm -i --env-file={PROD_APP_PATH}/env.base --env-file={PROD_APP_PATH}/env {DOCKER_IMAGE_PREFIX}-django python manage.py migrate
@@ -54,52 +53,9 @@ docker run --rm -i --env-file={PROD_APP_PATH}/env.base --env-file={PROD_APP_PATH
 INIT_SWARM_SCRIPT = f"""
 {PRINT_COMMAND}
 {GET_ADDR}
-{LOGIN_REGISTRY}
+{LOGIN_REGISTRY_SCRIPT}
 {JOIN_SWARM}
 """
-
-COLLECT_STATIC_SCRIPT = PRINT_COMMAND + f"""
-print_status "Collecting static files for django"
-docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -e BUILD_STATIC=true -v ./backend:/app/src {PROJECT_NAME}-django python manage.py collectstatic --noinput
-"""
-
-CHECK_BUILD_STATUS = """
-    BUILD_RESULT_STATUS=$?
-    if [ ${BUILD_RESULT_STATUS} -ne 0 ]; then
-        print_error "$1 Build failed!"
-        exit "${BUILD_RESULT_STATUS}"
-    fi
-"""
-BUILD_IMAGE_COMMAND = PRINT_COMMAND + """
-function build_image () {
-""" + f"""
-    set -e
-    print_status "Building $1"
-    docker build --secret id=sentry_auth,env=SENTRY_AUTH_TOKEN  -t {DOCKER_IMAGE_PREFIX}-$1 -f $2 $3  --platform linux/amd64
-    {CHECK_BUILD_STATUS}
-""" + """
-}
-"""
-
-
-BUILD_IMAGES_SCRIPT = f"""
-{PRINT_COMMAND}
-{BUILD_IMAGE_COMMAND}
-
-print_status "Building images"
-export DOCKER_CLI_HINTS="false"
-build_image "django" "{PROJECT_DIR}/backend/Dockerfile.prod" "backend"
-cd {PROJECT_DIR}/spa
-npm run build
-cd {PROJECT_DIR}
-build_image "nextjs" "{PROJECT_DIR}/spa/Dockerfile.prod" "spa"
-
-{LOGIN_REGISTRY}
-print_status "Pushing images to registry"
-docker push {DOCKER_IMAGE_PREFIX}-django
-docker push {DOCKER_IMAGE_PREFIX}-nextjs
-""" 
-
 
 RELOAD_NGINX = f"""
 NGINX_CONTAINER=$(docker ps -q -f name=nginx)
@@ -111,6 +67,7 @@ CERTS_VOLUME=/app/certbot/certificates
 CHALLENGE_VOLUME=/app/certbot/challenge
 docker run --rm --name temp_certbot -v $CERTS_VOLUME:/etc/letsencrypt -v $CHALLENGE_VOLUME:/tmp/letsencrypt certbot/certbot:v1.14.0 certonly --non-interactive --webroot --agree-tos --keep-until-expiring --text --email sergey.lihobabin@gmail.com -d {PROJECT_DOMAIN} -w /tmp/letsencrypt
 """
+
 GEN_FAKE_CERTS = f"""
 cp -r /app/certbot/certificates/live/{PROJECT_DOMAIN} /app/certbot/certificates/live/dummy
 """
