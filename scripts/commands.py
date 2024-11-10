@@ -26,7 +26,6 @@ def reload_nginx():
 def update_swarm(compose_file: str, stack_name: str):
     print_status(f"Updating {stack_name} swarm")
     STACK_COMMAND = f"docker stack config -c {compose_file} | docker stack deploy --with-registry-auth --detach=false -c - {stack_name}"
-    print_status(STACK_COMMAND)
     run_remote_commands([STACK_COMMAND, ])
     print_status("Prune images")
     run_remote_commands(['docker image prune -f',])
