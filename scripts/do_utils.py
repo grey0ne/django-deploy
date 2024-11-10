@@ -2,8 +2,8 @@ from typing import Any
 import time
 
 from scripts.http_request import request
-from scripts.do_constants import (
-    DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, REGION, DROPLET_SIZE,
+from scripts.constants import (
+    DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, DO_REGION, DROPLET_SIZE,
     DROPLET_OS_IMAGE, SSH_FINGERPRINT, DROPLET_TAGS, PG_SIZE, PG_VERSION, PG_NODES_NUM,
     STATUS_CHECK_INTERVAL
 )
@@ -66,7 +66,7 @@ def create_droplet(name: str, project_id: str) -> dict[str, Any]:
     url = DROPLETS_URL
     data: dict[str, Any] = {
         "name": name,
-        "region": REGION,
+        "region": DO_REGION,
         "size": DROPLET_SIZE,
         "image": DROPLET_OS_IMAGE,
         "ssh_keys": [SSH_FINGERPRINT],
@@ -120,7 +120,7 @@ def create_pg_cluster(name: str, project_id: str):
         "name": name,
         "engine": "pg",
         "num_nodes": PG_NODES_NUM,
-        "region": REGION,
+        "region": DO_REGION,
         "size": PG_SIZE,
         "version": PG_VERSION,
         "tags": ["auto-created"],

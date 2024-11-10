@@ -7,8 +7,8 @@ from scripts.do_utils import (
     DOException
 )
 from scripts.helpers import save_env_option
-from scripts.constants import PROJECT_DOMAIN, PROJECT_NAME
-from scripts.do_constants import (
+from scripts.constants import (
+    PROJECT_DOMAIN, PROJECT_NAME,
     DO_TOKEN, PROJECT_DESCRIPTION, DROPLET_NAME, PG_USERNAME,
     STATUS_CHECK_INTERVAL, PG_CLUSTER_NAME, PG_DB_NAME
 )

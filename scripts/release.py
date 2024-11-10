@@ -1,14 +1,8 @@
 from scripts.http_request import request
 from scripts.helpers import print_status, save_env_option
-from scripts.constants import PROJECT_NAME, ENV_DIR
-import os
-
-CURRENT_VERION = int(os.getenv('PROJECT_VERSION', 1))
-SENTRY_ORG = os.getenv('SENTRY_ORG', 'grey')
-SENTRY_URL = f'https://sentry.io/api/0/organizations/{SENTRY_ORG}/releases/'
-SENTRY_RELEASE_TOKEN = os.getenv('SENTRY_RELEASE_TOKEN')
-SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-django'))
-VERSION_FILE = os.path.join(ENV_DIR, 'version')
+from scripts.constants import (
+    PROJECT_NAME, SENTRY_PROJECTS, SENTRY_RELEASE_TOKEN, SENTRY_URL, VERSION_FILE
+)
 
 def sentry_release(version: str):
     print_status(f'Sending verion {version} to Sentry. Projects {SENTRY_PROJECTS.replace(",", ", ")}')

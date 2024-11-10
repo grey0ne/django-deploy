@@ -1,7 +1,6 @@
 from subprocess import PIPE
 import subprocess
 import fileinput
-import os
 
 from scripts.constants import PROJECT_DOMAIN, PROD_ENV_FILE
 
@@ -39,11 +38,3 @@ def envsubst(from_file: str, to_file: str, variables: list[str] = []):
     else:
         variables_str = ""
     run_command(f'envsubst {variables_str} < {from_file} > {to_file}')
-
-def get_config_value(key: str, default: str | None = None) -> str:
-    result = os.getenv(key)
-    if result is None:
-        if default is not None:
-            return default
-        raise ValueError(f'Variable {key} is required')
-    return result
