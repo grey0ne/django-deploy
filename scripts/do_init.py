@@ -3,7 +3,7 @@ from scripts.do_utils import (
     get_or_create_droplet, get_or_create_project, get_public_address,
     create_or_update_domain_record,
     get_or_create_pg_cluster, get_existing_pg_cluster,
-    get_or_create_pg_user, get_or_create_pg_database, update_pg_firewall,
+    get_or_create_pg_user, get_or_create_pg_database, add_pg_firewall_rule,
     DOException
 )
 from scripts.helpers import save_env_option
@@ -48,7 +48,7 @@ def init_do_infra():
     if 'password' in pg_user:
         save_env_option('DATABASE_PASSWORD', pg_user['password'])
     get_or_create_pg_database(cluster_id, PG_DB_NAME)
-    update_pg_firewall(cluster_id, droplet_data['id'])
+    add_pg_firewall_rule(cluster_id, droplet_data['id'])
 
 
 init_do_infra()

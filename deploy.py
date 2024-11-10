@@ -1,12 +1,14 @@
-from scripts.commands import (
+from scripts.shell_commands import (
     INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS, RELOAD_NGINX
 )
-from scripts.helpers import (
-    run_command, run_remote_commands, copy_to_remote, print_status, get_image_hash, update_swarm,
-    envsubst, collect_static, upload_images, login_registry, build_images
+from scripts.commands import (
+    copy_to_remote, get_image_hash, update_swarm,
+    collect_static, upload_images, login_registry, build_images
 )
+from scripts.helpers import run_command, run_remote_commands, print_status, envsubst
 from scripts.constants import (
-    DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR, DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE
+    DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR,
+    DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE
 )
 from scripts.release import update_sentry_release
 import os

@@ -1,5 +1,6 @@
 import os
 from scripts.constants import PROJECT_NAME
+from scripts.helpers import get_config_value
 
 PROJECT_DESCRIPTION = f"{PROJECT_NAME} project"
 
@@ -8,7 +9,7 @@ REGION = os.getenv("DO_REGION", "ams3")
 
 DROPLET_OS_IMAGE = os.getenv("DO_DROPLET_OS_IMAGE", "debian-12-x64")
 DROPLET_SIZE = os.getenv("DO_SIZE", "s-1vcpu-1gb")
-DROPLET_NAME = f"{PROJECT_NAME}-app"
+DROPLET_NAME = get_config_value("DO_DROPLET_NAME", default=f"{PROJECT_NAME}-app")
 DROPLET_TAGS = ["auto-created"]
 SSH_FINGERPRINT = os.getenv("DO_KEY_FINGERPRINT")
 PG_NODES_NUM = 1
