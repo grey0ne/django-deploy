@@ -20,13 +20,15 @@ server {
     ssl_certificate /etc/letsencrypt/live/${PROJECT_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${PROJECT_DOMAIN}/privkey.pem;
 
-    client_max_body_size 5000k;
+    client_max_body_size 50000k;
 
     gzip on;
     gzip_min_length 1000;
     gzip_proxied any;
     gzip_types text/css application/x-javascript;
-    
+
+    # We need dynamic resolver in order to load nginx without upstreams.
+    # IP is valid for docker compose resolver
     resolver 127.0.0.11 valid=30s;
 
     location ~ ^/(admin|api|login|complete|static|s)/ {
