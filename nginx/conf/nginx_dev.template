@@ -51,7 +51,7 @@ server {
     ssl_certificate /app/ssl/${PROJECT_NAME}.crt;
     ssl_certificate_key /app/ssl/${PROJECT_NAME}.key;
 
-    client_max_body_size 5000k;
+    client_max_body_size 50000k;
 
     gzip on;
     gzip_min_length 1000;

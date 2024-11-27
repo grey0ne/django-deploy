@@ -1,9 +1,9 @@
 from typing import Any
 import time
-from scripts.utils import request
 
-from scripts.do_constants import (
-    DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, REGION, DROPLET_SIZE,
+from scripts.http_request import request
+from scripts.constants import (
+    DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, DO_REGION, DROPLET_SIZE,
     DROPLET_OS_IMAGE, SSH_FINGERPRINT, DROPLET_TAGS, PG_SIZE, PG_VERSION, PG_NODES_NUM,
     STATUS_CHECK_INTERVAL
 )
@@ -66,7 +66,7 @@ def create_droplet(name: str, project_id: str) -> dict[str, Any]:
     url = DROPLETS_URL
     data: dict[str, Any] = {
         "name": name,
-        "region": REGION,
+        "region": DO_REGION,
         "size": DROPLET_SIZE,
         "image": DROPLET_OS_IMAGE,
         "ssh_keys": [SSH_FINGERPRINT],
@@ -120,7 +120,7 @@ def create_pg_cluster(name: str, project_id: str):
         "name": name,
         "engine": "pg",
         "num_nodes": PG_NODES_NUM,
-        "region": REGION,
+        "region": DO_REGION,
         "size": PG_SIZE,
         "version": PG_VERSION,
         "tags": ["auto-created"],
@@ -177,16 +177,31 @@ def get_or_create_pg_database(cluster_id: str, db_name: str):
         return existing_db
     return create_pg_database(cluster_id, db_name)
 
-def update_pg_firewall(cluster_id: str, droplet_id: str):
+def get_pg_firewall(cluster_id: str) -> list[Any]:
+    url = f"{DO_API_DOMAIN}/v2/databases/{cluster_id}/firewall"
+    response = do_get_request(url)
+    return response['rules']
+
+def update_pg_firewall(cluster_id: str, rules: list[Any]):
     url = f"{DO_API_DOMAIN}/v2/databases/{cluster_id}/firewall"
     firewall_data = {
-        "rules": [{
-            "type": "droplet",
-            "value": str(droplet_id)
-        }]
+        "rules": rules
     }
-    print(f'Updating firewall data for PG cluster {cluster_id} to allow droplet {droplet_id}')
     do_put_request(url, firewall_data)
+
+
+def add_pg_firewall_rule(cluster_id: str, droplet_id: str):
+    existing_rules = get_pg_firewall(cluster_id)
+    for rule in existing_rules:
+        if rule['type'] == 'droplet' and rule['value'] == str(droplet_id):
+            print(f'Firewall rule for droplet {droplet_id} already exists')
+            return
+    existing_rules.append({
+        "type": "droplet",
+        "value": str(droplet_id)
+    })
+    update_pg_firewall(cluster_id, existing_rules)
+    print(f'Updating firewall data for PG cluster {cluster_id} to allow droplet {droplet_id}')
 
 
 def get_domain_records(domain: str):

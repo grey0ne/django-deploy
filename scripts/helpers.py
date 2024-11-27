@@ -1,7 +1,22 @@
-import subprocess
 from subprocess import PIPE
-from scripts.constants import PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR
-from scripts.commands import RELOAD_NGINX
+import subprocess
+import fileinput
+
+from scripts.constants import PROJECT_DOMAIN, PROD_ENV_FILE
+
+
+def save_env_option(option_name: str, value: str, env_file: str = PROD_ENV_FILE):
+    option_found = False
+    with fileinput.input(files=(env_file, ), encoding="utf-8", inplace=True) as f:
+        for line in f:
+            if f'{option_name}=' in line:
+                result = f'{option_name}={value}\n'
+                option_found=True
+            else:
+                result = line
+            print(result, end='')
+        if not option_found:
+            raise Exception('Option not found')
 
 def run_command(command: str):
     subprocess.run(command, shell=True, check=True)
@@ -13,40 +28,9 @@ def run_remote_commands(commands: list[str]):
     if p.stdout:
         print(p.stdout)
 
-def copy_to_remote(source: str, destination: str):
-    run_command(f'scp {source} root@{PROJECT_DOMAIN}:{destination}')
-
-def get_image_hash(image_name: str) -> str:
-    command = ["docker", "inspect", "--format={{index .RepoDigests 0}}", image_name]
-    p = subprocess.run(command, stdout=PIPE, encoding='ascii')
-    if p.stdout:
-        return p.stdout.strip()
-    return ""
-
 def print_status(msg: str):
     print(f"\033[0;32m{msg}\033[0m")
 
-def reload_nginx():
-    print_status("Reloading nginx")
-    run_remote_commands([RELOAD_NGINX, ])
-
-def update_swarm(compose_file: str, stack_name: str):
-    print_status(f"Updating {stack_name} swarm")
-    STACK_COMMAND = f"docker stack config -c {compose_file} | docker stack deploy --with-registry-auth --detach=false -c - {stack_name}"
-    run_remote_commands([STACK_COMMAND, ])
-    print_status("Prune images")
-    run_remote_commands(['docker image prune -f',])
-
-def setup_balancer():
-    print_status("Copying balancer files")
-    run_remote_commands([
-        f"mkdir -p /app/balancer",
-        f"mkdir -p /app/balancer/conf",
-    ])
-    copy_to_remote(f'{COMPOSE_DIR}/prod_balancer.yml', '/app/balancer/compose.yml')
-    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/balancer.conf', '/app/balancer/conf/default.conf')
-    update_swarm('/app/balancer/compose.yml', 'balancer')
-    reload_nginx()
 
 def envsubst(from_file: str, to_file: str, variables: list[str] = []):
     if variables:

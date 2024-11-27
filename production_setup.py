@@ -1,5 +1,6 @@
-from scripts.helpers import run_remote_commands, print_status, setup_balancer
-from scripts.commands import SETUP_CERTBOT, SETUP_DOCKER, PROJECT_DOMAIN, GEN_FAKE_CERTS
+from scripts.helpers import run_remote_commands, print_status
+from scripts.commands import setup_balancer
+from scripts.shell_commands import SETUP_CERTBOT, SETUP_DOCKER, PROJECT_DOMAIN, GEN_FAKE_CERTS
 
 print_status("Setting up docker")
 run_remote_commands([ SETUP_DOCKER, ])

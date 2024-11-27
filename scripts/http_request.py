@@ -3,8 +3,7 @@ import urllib.parse
 import urllib.error
 import urllib.request
 import json
-import fileinput
-from scripts.constants import PROD_ENV_FILE
+
 
 class Response(NamedTuple):
     body: str
@@ -75,18 +74,3 @@ def request(
         )
 
     return response
-
-
-def save_env_option(option_name: str, value: str, env_file: str = PROD_ENV_FILE):
-    option_found = False
-    with fileinput.input(files=(env_file, ), encoding="utf-8", inplace=True) as f:
-        for line in f:
-            if f'{option_name}=' in line:
-                result = f'{option_name}={value}\n'
-                option_found=True
-            else:
-                result = line
-            print(result, end='')
-        if not option_found:
-            raise Exception('Option not found')
-

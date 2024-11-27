@@ -1,138 +1,76 @@
 from scripts.constants import (
-    REGISTRY_PASSWORD, REGISTRY_HOSTNAME, REGISTRY_USERNAME,
-    DOCKER_IMAGE_PREFIX, PROD_APP_PATH, PROJECT_NAME,
-    PROJECT_DIR, PROJECT_DOMAIN, PROD_ENV_FILE, BASE_ENV_FILE
+    PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR, DOCKER_IMAGE_PREFIX,
+    BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR
 )
-
-PRINT_COMMAND = """
-    GREEN='\033[0;32m'
-    RED='\033[0;31m'
-    NC='\033[0m'
-
-    function print_status () {
-        echo "${GREEN}$1${NC}"
-    }
-
-    function print_error () {
-        echo "${RED}$1${NC}" >&2
-    }
-"""
-
-GET_ADDR = """
-for ADDR in $(ip addr show "eth0" | awk '/inet / {print $2}')
-do
-    if [[ $ADDR == *16 ]]
-    then
-        RESULT_ADDR=${ADDR::-3}
-    fi
-done
-"""
-
-LOGIN_REGISTRY = f"""
-{PRINT_COMMAND}
-print_status "Login to registry"
-echo {REGISTRY_PASSWORD} | docker login {REGISTRY_HOSTNAME} --username {REGISTRY_USERNAME} --password-stdin
-"""
-
-JOIN_SWARM = """
-if [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active" ]; then
-    print_status "Swarm already initialized"
-else
-    print_status "Initializing swarm"
-    docker swarm init --advertise-addr $RESULT_ADDR
-fi
-"""
-
-PERFORM_MIGRATIONS = f"""
-{PRINT_COMMAND}
-print_status "Update image for migrations"
-docker pull {DOCKER_IMAGE_PREFIX}-django
-print_status "Perform migrations"
-docker run --rm -i --env-file={PROD_APP_PATH}/env.base --env-file={PROD_APP_PATH}/env {DOCKER_IMAGE_PREFIX}-django python manage.py migrate
-"""
-
-INIT_SWARM_SCRIPT = f"""
-{PRINT_COMMAND}
-{GET_ADDR}
-{LOGIN_REGISTRY}
-{JOIN_SWARM}
-"""
-
-COLLECT_STATIC_SCRIPT = PRINT_COMMAND + f"""
-print_status "Collecting static files for django"
-docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -e BUILD_STATIC=true -v ./backend:/app/src {PROJECT_NAME}-django python manage.py collectstatic --noinput
-"""
-
-CHECK_BUILD_STATUS = """
-    BUILD_RESULT_STATUS=$?
-    if [ ${BUILD_RESULT_STATUS} -ne 0 ]; then
-        print_error "$1 Build failed!"
-        exit "${BUILD_RESULT_STATUS}"
-    fi
-"""
-BUILD_IMAGE_COMMAND = PRINT_COMMAND + """
-function build_image () {
-""" + f"""
-    set -e
-    print_status "Building $1"
-    docker build --secret id=sentry_auth,env=SENTRY_AUTH_TOKEN  -t {DOCKER_IMAGE_PREFIX}-$1 -f $2 $3  --platform linux/amd64
-    {CHECK_BUILD_STATUS}
-""" + """
-}
-"""
+from scripts.helpers import run_command, print_status, run_remote_commands
+from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT
+import subprocess
+from subprocess import PIPE
 
 
-BUILD_IMAGES_SCRIPT = f"""
-{PRINT_COMMAND}
-{BUILD_IMAGE_COMMAND}
+def copy_to_remote(source: str, destination: str):
+    run_command(f'scp {source} root@{PROJECT_DOMAIN}:{destination}')
 
-print_status "Building images"
-export DOCKER_CLI_HINTS="false"
-build_image "django" "{PROJECT_DIR}/backend/Dockerfile.prod" "backend"
-cd {PROJECT_DIR}/spa
-npm run build
-cd {PROJECT_DIR}
-build_image "nextjs" "{PROJECT_DIR}/spa/Dockerfile.prod" "spa"
-
-{LOGIN_REGISTRY}
-print_status "Pushing images to registry"
-docker push {DOCKER_IMAGE_PREFIX}-django
-docker push {DOCKER_IMAGE_PREFIX}-nextjs
-""" 
+def get_image_hash(image_name: str) -> str:
+    command = ["docker", "inspect", "--format={{index .RepoDigests 0}}", image_name]
+    p = subprocess.run(command, stdout=PIPE, encoding='ascii')
+    if p.stdout:
+        return p.stdout.strip()
+    return ""
 
 
-RELOAD_NGINX = f"""
-NGINX_CONTAINER=$(docker ps -q -f name=nginx)
-docker exec $NGINX_CONTAINER nginx -s reload
-"""
+def reload_nginx():
+    print_status("Reloading nginx")
+    run_remote_commands([RELOAD_NGINX, ])
 
-SETUP_CERTBOT = f"""
-CERTS_VOLUME=/app/certbot/certificates
-CHALLENGE_VOLUME=/app/certbot/challenge
-docker run --rm --name temp_certbot -v $CERTS_VOLUME:/etc/letsencrypt -v $CHALLENGE_VOLUME:/tmp/letsencrypt certbot/certbot:v1.14.0 certonly --non-interactive --webroot --agree-tos --keep-until-expiring --text --email sergey.lihobabin@gmail.com -d {PROJECT_DOMAIN} -w /tmp/letsencrypt
-"""
-GEN_FAKE_CERTS = f"""
-cp -r /app/certbot/certificates/live/{PROJECT_DOMAIN} /app/certbot/certificates/live/dummy
-"""
+def update_swarm(compose_file: str, stack_name: str):
+    print_status(f"Updating {stack_name} swarm")
+    STACK_COMMAND = f"docker stack config -c {compose_file} | docker stack deploy --with-registry-auth --detach=false -c - {stack_name}"
+    run_remote_commands([STACK_COMMAND, ])
+    print_status("Prune images")
+    run_remote_commands(['docker image prune -f',])
 
-SETUP_DOCKER = """
-if [ -x "$(command -v docker)" ]; then
-   echo "Docker already installed"
-else
-    # Add Docker's official GPG key:
-    apt update
-    apt upgrade -y
-    apt install ca-certificates curl -y
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-    chmod a+r /etc/apt/keyrings/docker.asc
+def setup_balancer():
+    print_status("Copying balancer files")
+    run_remote_commands([
+        f"mkdir -p /app/balancer",
+        f"mkdir -p /app/balancer/conf",
+    ])
+    copy_to_remote(f'{COMPOSE_DIR}/prod_balancer.yml', '/app/balancer/compose.yml')
+    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/balancer.conf', '/app/balancer/conf/default.conf')
+    update_swarm('/app/balancer/compose.yml', 'balancer')
+    reload_nginx()
 
-    # Add the repository to Apt sources:
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-      tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt update
-    apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-fi
-"""
+
+def collect_static():
+    print_status("Collecting static files for django. Uploading static to S3")
+    run_command(
+        f"docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -e BUILD_STATIC=true -v ./backend:/app/src {PROJECT_NAME}-django python manage.py collectstatic --noinput"
+    )
+
+def upload_images():
+    print_status("Uploading images to registry")
+    run_command(f"docker push {DOCKER_IMAGE_PREFIX}-django")
+    run_command(f"docker push {DOCKER_IMAGE_PREFIX}-nextjs")
+
+def login_registry():
+    run_command(LOGIN_REGISTRY_SCRIPT)
+
+def build_image(service: str, dockerfile: str, context: str):
+    print_status(f"Building image for {service}")
+    command = f"""
+        export DOCKER_CLI_HINTS="false"
+        docker build -t {DOCKER_IMAGE_PREFIX}-{service} -f {dockerfile} {context}  --platform linux/amd64
+    """
+    run_command(command)
+
+def build_images():
+    build_image("django", f"{PROJECT_DIR}/backend/Dockerfile.prod", f"{PROJECT_DIR}/backend")
+    #print_status("Building nextjs app")
+    #run_command(f"""
+        #cd {PROJECT_DIR}/spa
+        #npm run build
+        #cd {PROJECT_DIR}
+    #""")
+    build_image("nextjs", f"{PROJECT_DIR}/spa/Dockerfile.prod", f"{PROJECT_DIR}/spa")
+
