@@ -1,7 +1,7 @@
 import os
 from typing import Any, Generator
 import boto3 # type: ignore
-from constants import S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL
+from constants import S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_ACL
 
 S3_BACKUP_PATH = '/tmp/s3_backup'
 
@@ -42,17 +42,24 @@ def upload_dir(client: Any, dir: str, local_dir: str, bucket: str):
     file_key_set: set[str] = set() 
     for file_key in get_s3_files_list(client, dir, bucket):
         file_key_set.add(file_key)
+    print(f'Found {len(file_key_set)} files in S3')
+    local_paths_list: list[tuple[str, str]] = []
     for root, _, files in os.walk(local_dir):
-        print(f'Root: {root}')
         for file in files:
             local_path = os.path.join(root, file)
             relative_path = os.path.relpath(local_path, local_dir)
             s3_path = os.path.join(dir, relative_path)
-            if s3_path in file_key_set:
-                print(f'Skipping file "{s3_path}". Already exists')
-                continue
-            print(f'Uploading {local_path} to {s3_path}')
-            client.upload_file(local_path, bucket, s3_path)
+            local_paths_list.append((local_path, s3_path))
+    total_files = len(local_paths_list)
+    print(f'Found {total_files} local files')
+    counter = 0
+    for local_path, s3_path in local_paths_list:
+        counter += 1
+        if s3_path in file_key_set:
+            print(f'Skipping file "{s3_path}". Already exists')
+            continue
+        print(f'{counter}/{total_files} Uploading {local_path} to {s3_path}')
+        client.upload_file(local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL})
 
 
 def get_client() -> Any:
