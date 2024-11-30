@@ -60,3 +60,7 @@ SENTRY_URL = f'https://sentry.io/api/0/organizations/{SENTRY_ORG}/releases/'
 SENTRY_RELEASE_TOKEN = os.getenv('SENTRY_RELEASE_TOKEN')
 SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-django'))
 
+S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')
+S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID')
+S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
+S3_MEDIA_BUCKET = os.getenv('S3_MEDIA_BUCKET')
