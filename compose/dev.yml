@@ -2,7 +2,6 @@ name: ${PROJECT_NAME}
 
 services:
   django:
-    command: python -m uvicorn --reload --lifespan off --host 0.0.0.0 --port 8000 application.asgi:application 
     domainname: ${PROJECT_NAME}-django
     image: ${PROJECT_NAME}-django
     container_name: ${PROJECT_NAME}-django
@@ -61,6 +60,53 @@ services:
     networks:
       - app
 
+  celery:
+    image: ${PROJECT_NAME}-django
+    domainname: ${PROJECT_NAME}-celery
+    container_name: ${PROJECT_NAME}-celery
+    command: celery --app application.celeryapp worker -E -l info
+    volumes:
+      - ${PROJECT_DIR}/backend:/app/src
+    env_file:
+      - ${PROJECT_DIR}/environment/env.base
+      - ${PROJECT_DIR}/environment/env.dev
+    networks:
+      - app
+      - devnet
+    profiles:
+      - celery
+
+  centrifugo:
+    image: "centrifugo/centrifugo:v5.2.0"
+    container_name: ${PROJECT_NAME}-centrifugo
+    domainname: ${PROJECT_NAME}-centrifugo
+    volumes:
+      - ${PROJECT_DIR}/dev-scripts/centrifugo.json.dev:/centrifugo/centrifugo.json
+    command: centrifugo -c centrifugo.json --engine=redis
+    ports:
+      - "8888:8888"
+    depends_on:
+      - redis
+    networks:
+      - app
+      - devnet
+    profiles:
+      - centrifugo
+
+  redis:
+    image: "redis:7.2.3"
+    container_name: ${PROJECT_NAME}-redis
+    domainname: ${PROJECT_NAME}-redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - app
+      - devnet
+    profiles:
+      - celery
+      - centrifugo
+
+
 volumes:
   postgres-data:
     driver: local
@@ -68,6 +114,9 @@ volumes:
   minio-data:
     driver: local
     name: ${PROJECT_NAME}-minio-data
+  redis-data:
+    driver: local
+    name: ${PROJECT_NAME}-redis-data
 
 
 networks:
