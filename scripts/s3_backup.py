@@ -77,13 +77,13 @@ def get_client() -> Any:
 
 def backup_s3(backup_path: str = S3_BACKUP_PATH):
     if S3_MEDIA_BUCKET is None:
-        raise ValueError(f'{S3_MEDIA_BUCKET} is None')
+        raise ValueError(f'S3_MEDIA_BUCKET is None')
     client = get_client()
     download_dir(client, '', os.path.join(backup_path, S3_MEDIA_BUCKET), S3_MEDIA_BUCKET)
 
 def upload_s3(backup_path: str = S3_BACKUP_PATH):
     if S3_MEDIA_BUCKET is None:
-        raise ValueError(f'{S3_MEDIA_BUCKET} is None')
+        raise ValueError(f'S3_MEDIA_BUCKET is None')
     client = get_client()
     upload_dir(client, '', os.path.join(backup_path, S3_MEDIA_BUCKET), S3_MEDIA_BUCKET)
 
