@@ -1,6 +1,7 @@
 from scripts.constants import (
     PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR, DOCKER_IMAGE_PREFIX,
-    BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR
+    BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR, NGINX_CONFIG_DIR,
+    COMPOSE_PROFILES, SSL_CERTS_DIR
 )
 from scripts.helpers import run_command, print_status, run_remote_commands
 from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT
@@ -41,6 +42,19 @@ def setup_balancer():
     update_swarm('/app/balancer/compose.yml', 'balancer')
     reload_nginx()
 
+def copy_nginx_config(from_path: str, to_path: str):
+    print_status(f"Copying {from_path} to {to_path}")
+    run_command(
+        f"envsubst '$PROJECT_NAME,$PROJECT_DOMAIN' < {from_path} > {to_path}"
+    )
+
+def update_dev_nginx():
+    run_command(
+        f"mkdir -p {NGINX_CONFIG_DIR}"
+    )
+    copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/nginx_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}.conf")
+    if "centrifugo" in COMPOSE_PROFILES:
+        copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/centrifugo_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf")
 
 def collect_static():
     print_status("Collecting static files for django. Uploading static to S3")
@@ -66,11 +80,36 @@ def build_image(service: str, dockerfile: str, context: str):
 
 def build_images():
     build_image("django", f"{PROJECT_DIR}/backend/Dockerfile.prod", f"{PROJECT_DIR}/backend")
-    #print_status("Building nextjs app")
-    #run_command(f"""
-        #cd {PROJECT_DIR}/spa
-        #npm run build
-        #cd {PROJECT_DIR}
-    #""")
     build_image("nextjs", f"{PROJECT_DIR}/spa/Dockerfile.prod", f"{PROJECT_DIR}/spa")
+
+
+def gen_cert(name:str, domain:str):
+    print_status(f"Generating cert {name} for {domain}")
+    run_command(
+        f"{DEPLOY_DIR}/generate_certs.sh {name} {domain}"
+    )
+
+def add_cert_to_trusted(cert_path: str):
+    print_status(f"Adding cert to trusted {cert_path}")
+    run_command(
+        f"sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain {cert_path}"
+    )
+
+def update_hosts(domain: str):
+    print_status(f"Updating hosts file with {domain}")
+    run_command(
+        f"{DEPLOY_DIR}/update_hosts.sh addhost {domain}"
+    )
+
+def generate_dev_certs():
+    gen_cert(PROJECT_NAME, PROJECT_DOMAIN)
+    gen_cert(f"media_{PROJECT_NAME}", f"media.{PROJECT_DOMAIN}")
+    add_cert_to_trusted(f"{SSL_CERTS_DIR}/{PROJECT_NAME}.crt")
+    add_cert_to_trusted(f"{SSL_CERTS_DIR}/media_{PROJECT_NAME}.crt")
+    update_hosts(PROJECT_DOMAIN)
+    update_hosts(f"media.{PROJECT_DOMAIN}")
+    if "centrifugo" in COMPOSE_PROFILES:
+        gen_cert(f"centrifugo_{PROJECT_NAME}", f"centrifugo.{PROJECT_DOMAIN}")
+        add_cert_to_trusted(f"{SSL_CERTS_DIR}/centrifugo_{PROJECT_NAME}.crt")
+        update_hosts(f"centrifugo.{PROJECT_DOMAIN}")
 

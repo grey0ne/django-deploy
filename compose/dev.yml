@@ -84,8 +84,6 @@ services:
     volumes:
       - ${PROJECT_DIR}/dev-scripts/centrifugo.json.dev:/centrifugo/centrifugo.json
     command: centrifugo -c centrifugo.json --engine=redis
-    ports:
-      - "8888:8888"
     depends_on:
       - redis
     networks:
