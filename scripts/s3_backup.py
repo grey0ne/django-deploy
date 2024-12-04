@@ -24,6 +24,12 @@ def get_s3_files_list(client: Any, dir: str, bucket: str) -> Generator[str, None
                 if counter % 100 == 0:
                     print(f'Found {counter} files')
 
+def s3_create_bucket():
+    client = get_client()
+    client.create_bucket(
+        ACL=S3_ACL,
+        Bucket=S3_MEDIA_BUCKET
+    )
 
 def download_dir(client: Any, dir: str, local_dir: str, bucket: str):
     print(f'Downloading Directory "{dir}" from bucket "{bucket}"')
@@ -59,7 +65,9 @@ def upload_dir(client: Any, dir: str, local_dir: str, bucket: str):
             print(f'Skipping file "{s3_path}". Already exists')
             continue
         print(f'{counter}/{total_files} Uploading {local_path} to {s3_path}')
-        client.upload_file(local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL})
+        client.upload_file(
+            local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL}
+        )
 
 
 def get_client() -> Any:
@@ -67,6 +75,7 @@ def get_client() -> Any:
     print(f'S3 Endpoint {S3_ENDPOINT_URL}')
     print(f'S3 Bucket {S3_MEDIA_BUCKET}') 
     print(f'S3 Key ID {S3_ACCESS_KEY_ID}')
+    print(f'ACL is {S3_ACL}')
     return boto3.client( # type: ignore
          service_name='s3',
          endpoint_url=S3_ENDPOINT_URL,

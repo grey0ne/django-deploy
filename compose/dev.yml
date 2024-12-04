@@ -47,6 +47,7 @@ services:
       - app
       - devnet
 
+
   postgres:
     image: "postgres:16.4-alpine"
     container_name: ${PROJECT_NAME}-postgres
