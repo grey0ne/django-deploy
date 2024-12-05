@@ -2,6 +2,7 @@ import os
 from typing import Any, Generator
 import boto3 # type: ignore
 from constants import S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_ACL
+from mimetypes import guess_type
 
 S3_BACKUP_PATH = '/tmp/s3_backup'
 
@@ -64,9 +65,10 @@ def upload_dir(client: Any, dir: str, local_dir: str, bucket: str):
         if s3_path in file_key_set:
             print(f'Skipping file "{s3_path}". Already exists')
             continue
-        print(f'{counter}/{total_files} Uploading {local_path} to {s3_path}')
+        mimetype = guess_type(local_path)[0]
+        print(f'{counter}/{total_files} Uploading {local_path} with type {mimetype} to {s3_path}')
         client.upload_file(
-            local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL}
+            local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL, 'ContentType': mimetype}
         )
 
 
