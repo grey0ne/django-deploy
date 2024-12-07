@@ -8,10 +8,17 @@ from scripts.commands import (
 from scripts.helpers import run_command, run_remote_commands, print_status, envsubst
 from scripts.constants import (
     DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR,
-    DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE
+    DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE, COMPOSE_PROFILES
 )
 from scripts.release import update_sentry_release
 import os
+
+def render_prod_nginx_conf(conf_name: str, target_name: str):
+    envsubst(f'{DEPLOY_DIR}/nginx/conf/{conf_name}', f'{DEPLOY_DIR}/nginx/conf/{target_name}', ['PROJECT_NAME', 'PROJECT_DOMAIN'])
+    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{target_name}', f'/app/balancer/conf/{target_name}')
+    run_command(f"rm {DEPLOY_DIR}/nginx/conf/{target_name}")
+
+
 
 update_sentry_release()
 
@@ -40,9 +47,9 @@ run_remote_commands([INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS])
 update_swarm(f'{PROD_APP_PATH}/prod.yml', PROJECT_NAME)
 
 print_status(f"Copying nginx config to {PROJECT_DOMAIN}")
-envsubst(f'{DEPLOY_DIR}/nginx/conf/nginx_prod.template', f'{DEPLOY_DIR}/nginx/conf/{PROJECT_NAME}.conf', ['PROJECT_NAME', 'PROJECT_DOMAIN'])
-copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{PROJECT_NAME}.conf', f'/app/balancer/conf/{PROJECT_NAME}.conf')
-run_command(f"rm {DEPLOY_DIR}/nginx/conf/{PROJECT_NAME}.conf")
+render_prod_nginx_conf('nginx_prod.template', f'{PROJECT_NAME}.conf')
+if "centrifugo" in COMPOSE_PROFILES:
+    render_prod_nginx_conf('nginx_prod.template', f'{PROJECT_NAME}_centrifugo.conf')
 
 print_status("Reloading nginx")
 run_remote_commands([RELOAD_NGINX, ])

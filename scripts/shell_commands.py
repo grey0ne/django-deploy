@@ -62,12 +62,6 @@ NGINX_CONTAINER=$(docker ps -q -f name=nginx)
 docker exec $NGINX_CONTAINER nginx -s reload
 """
 
-SETUP_CERTBOT = f"""
-CERTS_VOLUME=/app/certbot/certificates
-CHALLENGE_VOLUME=/app/certbot/challenge
-docker run --rm --name temp_certbot -v $CERTS_VOLUME:/etc/letsencrypt -v $CHALLENGE_VOLUME:/tmp/letsencrypt certbot/certbot:v1.14.0 certonly --non-interactive --webroot --agree-tos --keep-until-expiring --text --email sergey.lihobabin@gmail.com -d {PROJECT_DOMAIN} -w /tmp/letsencrypt
-"""
-
 GEN_FAKE_CERTS = f"""
 cp -r /app/certbot/certificates/live/{PROJECT_DOMAIN} /app/certbot/certificates/live/dummy
 """

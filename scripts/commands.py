@@ -20,7 +20,7 @@ def get_image_hash(image_name: str) -> str:
     return ""
 
 
-def reload_nginx():
+def reload_prod_nginx():
     print_status("Reloading nginx")
     run_remote_commands([RELOAD_NGINX, ])
 
@@ -40,7 +40,7 @@ def setup_balancer():
     copy_to_remote(f'{COMPOSE_DIR}/prod_balancer.yml', '/app/balancer/compose.yml')
     copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/balancer.conf', '/app/balancer/conf/default.conf')
     update_swarm('/app/balancer/compose.yml', 'balancer')
-    reload_nginx()
+    reload_prod_nginx()
 
 def copy_nginx_config(from_path: str, to_path: str):
     print_status(f"Copying {from_path} to {to_path}")
@@ -113,3 +113,11 @@ def generate_dev_certs():
         add_cert_to_trusted(f"{SSL_CERTS_DIR}/centrifugo_{PROJECT_NAME}.crt")
         update_hosts(f"centrifugo.{PROJECT_DOMAIN}")
 
+
+def setup_prod_domain_cert(domain: str):
+    SETUP_CERTBOT_COMMAND = f"""
+    CERTS_VOLUME=/app/certbot/certificates
+    CHALLENGE_VOLUME=/app/certbot/challenge
+    docker run --rm --name temp_certbot -v $CERTS_VOLUME:/etc/letsencrypt -v $CHALLENGE_VOLUME:/tmp/letsencrypt certbot/certbot:v1.14.0 certonly --non-interactive --webroot --agree-tos --keep-until-expiring --text --email sergey.lihobabin@gmail.com -d {domain} -w /tmp/letsencrypt
+    """
+    run_remote_commands([ SETUP_CERTBOT_COMMAND, ])

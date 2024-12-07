@@ -1,6 +1,7 @@
 from scripts.helpers import run_remote_commands, print_status
-from scripts.commands import setup_balancer
-from scripts.shell_commands import SETUP_CERTBOT, SETUP_DOCKER, PROJECT_DOMAIN, GEN_FAKE_CERTS
+from scripts.constants import COMPOSE_PROFILES
+from scripts.commands import setup_balancer, setup_prod_domain_cert, reload_prod_nginx
+from scripts.shell_commands import SETUP_DOCKER, PROJECT_DOMAIN, GEN_FAKE_CERTS
 
 print_status("Setting up docker")
 run_remote_commands([ SETUP_DOCKER, ])
@@ -10,6 +11,9 @@ run_remote_commands([
     f"mkdir -p /app/certbot/certificates",
     f"mkdir -p /app/certbot/challenge",
 ])
-run_remote_commands([ SETUP_CERTBOT, ])
+setup_prod_domain_cert(PROJECT_DOMAIN)
+if "centrifugo" in COMPOSE_PROFILES:
+    setup_prod_domain_cert(f"centrifugo.{PROJECT_DOMAIN}")
 print_status(f"Copying fake certs to dummy folder")
 run_remote_commands([ GEN_FAKE_CERTS, ])
+reload_prod_nginx()
