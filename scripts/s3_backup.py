@@ -28,7 +28,7 @@ def get_s3_files_list(client: Any, dir: str, bucket: str) -> Generator[str, None
 def s3_create_bucket():
     client = get_client()
     client.create_bucket(
-        ACL='public',
+        ACL=S3_ACL,
         Bucket=S3_MEDIA_BUCKET
     )
 
