@@ -49,7 +49,7 @@ update_swarm(f'{PROD_APP_PATH}/prod.yml', PROJECT_NAME)
 print_status(f"Copying nginx config to {PROJECT_DOMAIN}")
 render_prod_nginx_conf('nginx_prod.template', f'{PROJECT_NAME}.conf')
 if "centrifugo" in COMPOSE_PROFILES:
-    render_prod_nginx_conf('nginx_prod.template', f'{PROJECT_NAME}_centrifugo.conf')
+    render_prod_nginx_conf('centrifugo_prod.template', f'{PROJECT_NAME}_centrifugo.conf')
 
 print_status("Reloading nginx")
 run_remote_commands([RELOAD_NGINX, ])
