@@ -13,16 +13,16 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 0
-tmux send-keys './dc logs minio -f' C-m
+tmux send-keys 'pc logs minio -f' C-m
 
 tmux select-pane -t 1
-tmux send-keys './dc logs django -f' C-m
+tmux send-keys 'pc logs django -f' C-m
 
 tmux select-pane -t 2
-tmux send-keys './dc logs nextjs -f' C-m
+tmux send-keys 'pc logs nextjs -f' C-m
 
 tmux select-pane -t 3
-tmux send-keys './dc nginx logs nginx -f' C-m
+tmux send-keys 'pc nginx logs nginx -f' C-m
 
 tmux attach -t $SESSION
 
