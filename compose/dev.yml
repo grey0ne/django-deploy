@@ -78,7 +78,7 @@ services:
       - celery
 
   centrifugo:
-    image: "centrifugo/centrifugo:v5.2.0"
+    image: "centrifugo/centrifugo:v5.4.9"
     container_name: ${PROJECT_NAME}-centrifugo
     domainname: ${PROJECT_NAME}-centrifugo
     volumes:
