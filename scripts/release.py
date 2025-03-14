@@ -7,7 +7,8 @@ from scripts.constants import (
 def sentry_release(version: str):
     print_status(f'Sending verion {version} to Sentry. Projects {SENTRY_PROJECTS.replace(",", ", ")}')
     if not SENTRY_RELEASE_TOKEN:
-        raise ValueError('SENTRY_RELEASE_TOKEN is not set')
+        print_status('SENTRY_RELEASE_TOKEN is not set. Skipping Sentry release.')
+        return
     headers = {
         'Authorization': f'Bearer {SENTRY_RELEASE_TOKEN}',
     }
