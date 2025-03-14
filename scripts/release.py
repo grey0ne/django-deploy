@@ -32,8 +32,8 @@ def read_version():
 def save_version(version: str):
     with open(VERSION_FILE, 'w') as f:
         f.write(version)
-    save_env_option('PROJECT_VERSION', str(version))
-    save_env_option('NEXT_PUBLIC_VERSION', str(version))
+    save_env_option('PROJECT_VERSION', str(version), create=True)
+    save_env_option('NEXT_PUBLIC_VERSION', str(version), create=True)
 
 def update_sentry_release():
     current_version = read_version()
