@@ -1,7 +1,7 @@
 import os
 from typing import Any, Generator
 import boto3 # type: ignore
-from constants import S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_ACL
+from constants import S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_ACL, PROJECT_NAME
 from mimetypes import guess_type
 
 S3_BACKUP_PATH = '/tmp/s3_backup'
@@ -27,9 +27,10 @@ def get_s3_files_list(client: Any, dir: str, bucket: str) -> Generator[str, None
 
 def s3_create_bucket():
     client = get_client()
+    media_bucket = S3_MEDIA_BUCKET or f'{PROJECT_NAME}-media'
     client.create_bucket(
         ACL=S3_ACL,
-        Bucket=S3_MEDIA_BUCKET
+        Bucket=media_bucket
     )
 
 def download_dir(client: Any, dir: str, local_dir: str, bucket: str):
@@ -73,14 +74,16 @@ def upload_dir(client: Any, dir: str, local_dir: str, bucket: str):
 
 
 def get_client() -> Any:
+    endpoint_url = S3_ENDPOINT_URL or f'http://{PROJECT_NAME}-minio:9000'
+    media_bucket = S3_MEDIA_BUCKET or f'{PROJECT_NAME}-media'
     print('Initiating S3 Client')
-    print(f'S3 Endpoint {S3_ENDPOINT_URL}')
-    print(f'S3 Bucket {S3_MEDIA_BUCKET}') 
+    print(f'S3 Endpoint {endpoint_url}')
+    print(f'S3 Bucket {media_bucket}') 
     print(f'S3 Key ID {S3_ACCESS_KEY_ID}')
     print(f'ACL is {S3_ACL}')
     return boto3.client( # type: ignore
          service_name='s3',
-         endpoint_url=S3_ENDPOINT_URL,
+         endpoint_url=endpoint_url,
          aws_access_key_id=S3_ACCESS_KEY_ID,
          aws_secret_access_key=S3_SECRET_KEY,
     )
