@@ -31,6 +31,7 @@ services:
       - ${PROJECT_DIR}/spa/app:/app/app
       - ${PROJECT_DIR}/spa/next_utils:/app/next_utils
       - ${PROJECT_DIR}/spa/api:/app/api
+      - ${PROJECT_DIR}/spa/components:/app/components
       - ${PROJECT_DIR}/spa/.eslintrc.js:/app/.eslintrc.js
       - ${PROJECT_DIR}/spa/instrumentation.ts:/app/instrumentation.ts
       - ${PROJECT_DIR}/spa/next-end.d.ts:/app/next-end.d.ts
