@@ -78,7 +78,7 @@ server {
 
     resolver 127.0.0.11 valid=30s;
 
-    location ~ ^/(admin|api|login|complete|static|s)/ {
+    location ~ ^/(admin|api|idp|login|complete|static|s)/ {
         set $django${PROJECT_NAME} ${PROJECT_NAME}-django;
         proxy_pass http://$django${PROJECT_NAME}:8000;
         proxy_set_header X-Real-IP $remote_addr;
