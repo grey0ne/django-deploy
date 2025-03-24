@@ -28,18 +28,7 @@ services:
       - ${PROJECT_DIR}/environment/env.base
       - ${PROJECT_DIR}/environment/env.dev
     volumes:
-      - ${PROJECT_DIR}/spa/app:/app/app
-      - ${PROJECT_DIR}/spa/next_utils:/app/next_utils
-      - ${PROJECT_DIR}/spa/api:/app/api
-      - ${PROJECT_DIR}/spa/.eslintrc.js:/app/.eslintrc.js
-      - ${PROJECT_DIR}/spa/instrumentation.ts:/app/instrumentation.ts
-      - ${PROJECT_DIR}/spa/next-end.d.ts:/app/next-end.d.ts
-      - ${PROJECT_DIR}/spa/next.config.mjs:/app/next.config.mjs
-      - ${PROJECT_DIR}/spa/tsconfig.json:/app/tsconfig.json
-      - ${PROJECT_DIR}/spa/sentry.client.config.ts:/app/sentry.client.config.ts
-      - ${PROJECT_DIR}/spa/sentry.server.config.ts:/app/sentry.server.config.ts
-      - ${PROJECT_DIR}/spa/sentry.edge.config.ts:/app/sentry.edge.config.ts
-      - ${PROJECT_DIR}/spa/package.json:/app/package.json
+      - ${PROJECT_DIR}/spa:/app
     networks:
       - app
       - devnet
