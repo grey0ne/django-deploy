@@ -12,6 +12,7 @@ services:
       - ${PROJECT_DIR}/environment/env.dev
     volumes:
       - ${PROJECT_DIR}/backend:/app/src
+      - ${PROJECT_DIR}/backend_data:/app/backend_data
     depends_on:
       - postgres
     networks:

@@ -8,6 +8,8 @@ services:
     env_file:
       - /app/${PROJECT_NAME}/env.base
       - /app/${PROJECT_NAME}/env
+    volumes:
+      - /app/${PROJECT_NAME}/backend_data:/app/backend_data
 
   ${PROJECT_NAME}-nextjs:
     image: ${NEXTJS_IMAGE}
