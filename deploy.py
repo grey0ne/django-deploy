@@ -31,7 +31,7 @@ os.environ['DJANGO_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
 os.environ['NEXTJS_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')
 
 print_status(f"Deploying to {PROJECT_DOMAIN}")
-run_remote_commands([f"mkdir -p {PROD_APP_PATH}", ])
+run_remote_commands([f"mkdir -p {PROD_APP_PATH}", f"mkdir -p {PROD_APP_PATH}/backend_data"])
 print_status(f"Copying compose files to {PROJECT_DOMAIN}")
 
 envsubst(f'{COMPOSE_DIR}/prod.yml.template', f'{COMPOSE_DIR}/prod.yml')
