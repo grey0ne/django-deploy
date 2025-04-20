@@ -1,3 +1,3 @@
-from scripts.helpers import setup_balancer
+from scripts.commands import setup_balancer
 
 setup_balancer()
