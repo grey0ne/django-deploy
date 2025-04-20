@@ -27,7 +27,7 @@ def run_command(command: str):
 def run_remote_commands(commands: list[str]):
     ssh_command = ['ssh', f'root@{PROJECT_DOMAIN}', "bash -s"]
     command = "\n".join(commands)
-    p = subprocess.run(ssh_command, stdout=PIPE, input=command, encoding='ascii')
+    p = subprocess.run(ssh_command, stdout=PIPE, input=command, encoding='utf8')
     if p.stdout:
         print(p.stdout)
 
