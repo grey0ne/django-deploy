@@ -49,6 +49,3 @@ def init_do_infra():
         save_env_option('DATABASE_PASSWORD', pg_user['password'])
     get_or_create_pg_database(cluster_id, PG_DB_NAME)
     add_pg_firewall_rule(cluster_id, droplet_data['id'])
-
-
-init_do_infra()

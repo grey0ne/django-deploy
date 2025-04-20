@@ -10,6 +10,7 @@ def get_config_value(key: str, default: str | None = None) -> str:
 
 PROJECT_DOMAIN = get_config_value("PROJECT_DOMAIN")
 PROJECT_NAME = get_config_value("PROJECT_NAME")
+VERBOSE = os.getenv("VERBOSE", "false").lower() == "true"
 REGISTRY_USERNAME = os.getenv("REGISTRY_USERNAME")
 REGISTRY_PASSWORD = os.getenv("REGISTRY_PASSWORD")
 REGISTRY_HOSTNAME = os.getenv("REGISTRY_HOSTNAME")
