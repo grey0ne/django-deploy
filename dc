@@ -17,7 +17,9 @@ PROJECT_TEMPLATE_DIR="$HOME/projects/project_template"
 
 source $ENV_DIR/env.base
 source $ENV_DIR/env.dev
-source $PROJECT_DIR/.env
+if [ -f "$PROJECT_DIR/.env" ]; then
+    source $PROJECT_DIR/.env
+fi
 
 S3_BACKUP_COMMAND="docker run -it --rm -v ${PROJECT_DIR}/backend:/app/src -v ${PROJECT_DIR}/deploy:/app/deploy -v ${PROJECT_DIR}/backup/s3_backup:/tmp/s3_backup --network ${PROJECT_NAME} --env-file $ENV_DIR/env.base"
 
