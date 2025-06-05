@@ -52,9 +52,9 @@ def update_dev_nginx():
     run_command(
         f"mkdir -p {NGINX_CONFIG_DIR}"
     )
-    copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/nginx_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}.conf")
+    copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/nginx_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}.conf.template")
     if "centrifugo" in COMPOSE_PROFILES:
-        copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/centrifugo_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf")
+        copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/centrifugo_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf.template")
 
 def collect_static():
     print_status("Collecting static files for django. Uploading static to S3")

@@ -26,7 +26,7 @@ server {
     gzip_proxied any;
     gzip_types text/css application/x-javascript;
 
-    resolver 127.0.0.11 valid=30s;
+    resolver $NGINX_LOCAL_RESOLVERS valid=30s;
 
     location ~ ^/(${PROJECT_NAME}-media)/ {
         set $minio${PROJECT_NAME} ${PROJECT_NAME}-minio;
@@ -76,7 +76,7 @@ server {
     gzip_proxied any;
     gzip_types text/css application/x-javascript;
 
-    resolver 127.0.0.11 valid=30s;
+    resolver $NGINX_LOCAL_RESOLVERS valid=30s;
 
     location ~ ^/(admin|api|idp|login|complete|static|s)/ {
         set $django${PROJECT_NAME} ${PROJECT_NAME}-django;
