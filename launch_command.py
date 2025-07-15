@@ -1,37 +1,25 @@
 import sys
 from dataclasses import dataclass
-from scripts.helpers import run_remote_commands, print_status
-from scripts.constants import COMPOSE_PROFILES
-from scripts.shell_commands import SETUP_DOCKER, PROJECT_DOMAIN, GEN_FAKE_CERTS
+from scripts.helpers import print_status
 from scripts.do_init import init_do_infra
-from scripts.commands import setup_balancer, update_dev_nginx, setup_prod_domain_cert, reload_prod_nginx
+from scripts.commands import (
+    setup_balancer, update_dev_nginx, production_setup, create_s3_backup,
+    restore_s3_backup, create_s3_dev_bucket
+)
 from scripts.deploy_production import deploy_production
-from typing import Any
+from scripts.constants import ENV_DIR
+from typing import Callable
 
 
 @dataclass(kw_only=True, slots=True, frozen=True)
 class Command:
     keywords: list[str]
     description: str
-    func: Any
+    func: Callable[[], None]
 
 command = sys.argv[1]
 
-def production_setup():
-    print_status("Setting up docker")
-    run_remote_commands([ SETUP_DOCKER, ])
-    setup_balancer()
-    print_status(f"Setting up certbot for domain {PROJECT_DOMAIN}")
-    run_remote_commands([
-        f"mkdir -p /app/certbot/certificates",
-        f"mkdir -p /app/certbot/challenge",
-    ])
-    setup_prod_domain_cert(PROJECT_DOMAIN)
-    if "centrifugo" in COMPOSE_PROFILES:
-        setup_prod_domain_cert(f"centrifugo.{PROJECT_DOMAIN}")
-    print_status(f"Copying fake certs to dummy folder")
-    run_remote_commands([ GEN_FAKE_CERTS, ])
-    reload_prod_nginx()
+
 
 def list_commands():
     print_status("Available commands:")
@@ -64,6 +52,31 @@ COMMANDS: list[Command] = [
         keywords=["deploy", "deployprod"],
         description="Build and deploy the production environment",
         func=deploy_production
+    ),
+    Command(
+        keywords=["s3backupdev",],
+        description="Download all files from Dev S3 to local directory",
+        func=lambda: create_s3_backup(f"{ENV_DIR}/env.dev")
+    ),
+    Command(
+        keywords=["s3restoredev",],
+        description="Restores files from local backup to Dev S3",
+        func=lambda: restore_s3_backup(f"{ENV_DIR}/env.dev")
+    ),
+    Command(
+        keywords=["s3backupprod",],
+        description="Download all files from Production S3 to local directory",
+        func=lambda: create_s3_backup(f"{ENV_DIR}/env.prod")
+    ),
+    Command(
+        keywords=["s3restoreprod",],
+        description="Restores files from local backup to Production S3",
+        func=lambda: restore_s3_backup(f"{ENV_DIR}/env.prod")
+    ),
+    Command(
+        keywords=["s3createdevbucket",],
+        description="Create S3 bucket for dev environment",
+        func=create_s3_dev_bucket
     )
 ]
 

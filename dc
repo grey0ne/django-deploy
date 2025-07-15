@@ -11,7 +11,6 @@ PROD_ENV="$ENV_DIR/env.prod"
 DEV_COMPOSE="docker-compose -f $DEPLOY_DIR/compose/dev.yml --env-file=$ENV_DIR/env.base --env-file=$ENV_DIR/env.dev"
 BALANCER_COMPOSE="docker-compose -f $DEPLOY_DIR/compose/balancer.yml"
 
-
 DEV_SUPERUSER_PASSWORD="devpass"
 PROJECT_TEMPLATE_DIR="$HOME/projects/project_template"
 
@@ -20,8 +19,6 @@ source $ENV_DIR/env.dev
 if [ -f "$PROJECT_DIR/.env" ]; then
     source $PROJECT_DIR/.env
 fi
-
-S3_BACKUP_COMMAND="docker run -it --rm -v ${PROJECT_DIR}/backend:/app/src -v ${PROJECT_DIR}/deploy:/app/deploy -v ${PROJECT_DIR}/backup/s3_backup:/tmp/s3_backup --network ${PROJECT_NAME} --env-file $ENV_DIR/env.base"
 
 PROD_DIR="/app/$PROJECT_NAME"
 DOCKER_IMAGE_PREFIX="$REGISTRY_HOSTNAME/$REGISTRY_NAMESPACE/$PROJECT_NAME"
@@ -52,16 +49,6 @@ elif [ $1 = "runtest" ]; then
     docker run -it --rm --hostname=$PROJECT_NAME-tests --name=$PROJECT_NAME-tests -v .:/app/src --ipc=host --network=$PROJECT_NAME $PROJECT_NAME-playwright npx playwright test
 elif [ $1 = "generatetypes" ]; then
     $DEV_COMPOSE exec nextjs npx -y openapi-typescript http://${PROJECT_NAME}-django:8000/api/openapi.json --output api/apiTypes.ts
-elif [ $1 = "s3backupdev" ]; then
-    $S3_BACKUP_COMMAND --env-file $ENV_DIR/env.dev --network=$PROJECT_NAME $PROJECT_NAME-django python s3_backup.py
-elif [ $1 = "s3backupprod" ]; then
-    $S3_BACKUP_COMMAND --env-file $ENV_DIR/env.prod $PROJECT_NAME-django python /app/deploy/scripts/s3_backup.py
-elif [ $1 = "s3restoreprod" ]; then
-    $S3_BACKUP_COMMAND --env-file $ENV_DIR/env.prod $PROJECT_NAME-django python /app/deploy/scripts/s3_upload.py
-elif [ $1 = "s3restoredev" ]; then
-    $S3_BACKUP_COMMAND --env-file $ENV_DIR/env.dev $PROJECT_NAME-django python /app/deploy/scripts/s3_upload.py
-elif [ $1 = "s3createdevbucket" ]; then
-    $S3_BACKUP_COMMAND --env-file $ENV_DIR/env.dev $PROJECT_NAME-django python /app/deploy/scripts/s3_create_bucket.py
 elif [ $1 = "dumpprod" ]; then
     source $PROD_ENV
     ssh root@$PROJECT_DOMAIN "docker run --rm -i -e PGPASSWORD=$DATABASE_PASSWORD postgres:16.4-alpine pg_dump -U $DATABASE_USER -h $DATABASE_HOST -p $DATABASE_PORT $DATABASE_NAME" > backup/$PROJECT_NAME.sql
@@ -91,7 +78,7 @@ elif [ $1 = "logsprod" ]; then
 elif [ $1 = "gencerts" ]; then
     python3 $DEPLOY_DIR/generate_dev_certificates.py
     $BALANCER_COMPOSE restart
-elif [ $1 = "initinfra" ] || [ $1 = "initprod" ] || [ $1 = "deploybalancer" ] || [ $1 = "deployprod" ]; then
+elif [ $1 = "initinfra" ] || [ $1 = "initprod" ] || [ $1 = "deploybalancer" ] || [ $1 = "deployprod" ] || [ $1 = "s3backupdev" ] || [ $1 = "s3restoredev" ] || [ $1 = "s3backupprod" ] || [ $1 = "s3restoreprod" ]; then
     source $PROD_ENV
     python3 $DEPLOY_DIR/launch_command.py $1
 elif [ $1 = "updatetemplate" ]; then

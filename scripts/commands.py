@@ -1,13 +1,26 @@
 from scripts.constants import (
     PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR, DOCKER_IMAGE_PREFIX,
     BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR, NGINX_CONFIG_DIR,
-    COMPOSE_PROFILES, SSL_CERTS_DIR
+    COMPOSE_PROFILES, SSL_CERTS_DIR, ENV_DIR
 )
 from scripts.helpers import run_command, print_status, run_remote_commands
-from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT
+from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT, GEN_FAKE_CERTS, SETUP_DOCKER
 import subprocess
 from subprocess import PIPE
 
+S3_BACKUP_COMMAND=f"docker run -it --rm -v {PROJECT_DIR}/backend:/app/src -v {PROJECT_DIR}/deploy:/app/deploy -v {PROJECT_DIR}/backup/s3_backup:/tmp/s3_backup --network {PROJECT_NAME} --env-file {ENV_DIR}/env.base"
+
+def restore_s3_backup(env_file: str):
+    command = f"{S3_BACKUP_COMMAND} --env-file {env_file} {PROJECT_NAME}-django python /app/deploy/scripts/s3_upload.py"
+    run_command(command)
+
+def create_s3_backup(env_file: str):
+    command = f"{S3_BACKUP_COMMAND} --env-file {env_file} {PROJECT_NAME}-django python /app/deploy/scripts/s3_backup.py"
+    run_command(command)
+
+def create_s3_dev_bucket():
+    command = f"{S3_BACKUP_COMMAND} --env-file {ENV_DIR}/env.dev {PROJECT_NAME}-django python /app/deploy/scripts/s3_create_bucket.py"
+    run_command(command)
 
 def copy_to_remote(source: str, destination: str):
     run_command(f'scp {source} root@{PROJECT_DOMAIN}:{destination}')
@@ -121,3 +134,20 @@ def setup_prod_domain_cert(domain: str):
     docker run --rm --name temp_certbot -v $CERTS_VOLUME:/etc/letsencrypt -v $CHALLENGE_VOLUME:/tmp/letsencrypt certbot/certbot:v1.14.0 certonly --non-interactive --webroot --agree-tos --keep-until-expiring --text --email sergey.lihobabin@gmail.com -d {domain} -w /tmp/letsencrypt
     """
     run_remote_commands([ SETUP_CERTBOT_COMMAND, ])
+
+
+def production_setup():
+    print_status("Setting up docker")
+    run_remote_commands([ SETUP_DOCKER, ])
+    setup_balancer()
+    print_status(f"Setting up certbot for domain {PROJECT_DOMAIN}")
+    run_remote_commands([
+        f"mkdir -p /app/certbot/certificates",
+        f"mkdir -p /app/certbot/challenge",
+    ])
+    setup_prod_domain_cert(PROJECT_DOMAIN)
+    if "centrifugo" in COMPOSE_PROFILES:
+        setup_prod_domain_cert(f"centrifugo.{PROJECT_DOMAIN}")
+    print_status(f"Copying fake certs to dummy folder")
+    run_remote_commands([ GEN_FAKE_CERTS, ])
+    reload_prod_nginx()
