@@ -25,6 +25,7 @@ services:
     domainname: ${PROJECT_NAME}-nextjs
     build:
       context: ${PROJECT_DIR}/spa
+      dockerfile: ${PROJECT_DIR}/deploy/docker/Dockerfile.nextjsdev
     env_file:
       - ${PROJECT_DIR}/environment/env.base
       - ${PROJECT_DIR}/environment/env.dev
@@ -83,7 +84,7 @@ services:
     container_name: ${PROJECT_NAME}-centrifugo
     domainname: ${PROJECT_NAME}-centrifugo
     volumes:
-      - ${PROJECT_DIR}/dev-scripts/centrifugo.json.dev:/centrifugo/centrifugo.json
+      - ${PROJECT_DIR}/environment/centrifugo.json.dev:/centrifugo/centrifugo.json
     command: centrifugo -c centrifugo.json --engine=redis
     depends_on:
       - redis

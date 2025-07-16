@@ -93,7 +93,7 @@ def build_image(service: str, dockerfile: str, context: str):
 
 def build_images():
     build_image("django", f"{PROJECT_DIR}/backend/Dockerfile.prod", f"{PROJECT_DIR}/backend")
-    build_image("nextjs", f"{PROJECT_DIR}/spa/Dockerfile.prod", f"{PROJECT_DIR}/spa")
+    build_image("nextjs", f"{PROJECT_DIR}/deploy/docker/Dockerfile.nextjsprod", f"{PROJECT_DIR}/spa")
 
 
 def gen_cert(name:str, domain:str):

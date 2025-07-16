@@ -54,8 +54,6 @@ elif [ $1 = "dumpprod" ]; then
     ssh root@$PROJECT_DOMAIN "docker run --rm -i -e PGPASSWORD=$DATABASE_PASSWORD postgres:16.4-alpine pg_dump -U $DATABASE_USER -h $DATABASE_HOST -p $DATABASE_PORT $DATABASE_NAME" > backup/$PROJECT_NAME.sql
 elif [ $1 = "dumpdev" ]; then
     $DEV_COMPOSE exec postgres pg_dump --username=$PROJECT_NAME $PROJECT_NAME > backup/${PROJECT_NAME}dev.sql
-elif [ $1 = "devdb" ]; then
-    $DEV_COMPOSE exec postgres psql --username=$PROJECT_NAME $PROJECT_NAME
 elif [ $1 = "restoreprod" ]; then
     source $PROD_ENV
     ssh root@$PROJECT_DOMAIN "docker run --rm -i -e PGPASSWORD=$DATABASE_PASSWORD postgres:16.4-alpine psql -U $DATABASE_USER -h $DATABASE_HOST -p $DATABASE_PORT $2" < $3
