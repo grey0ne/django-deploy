@@ -1,5 +1,6 @@
 from scripts.http_request import request
-from scripts.helpers import print_status, save_env_option, run_command, print_warning
+from scripts.helpers import save_env_option, run_command
+from scripts.printing import print_status, print_warning
 from scripts.constants import (
     PROJECT_NAME, SENTRY_PROJECTS, SENTRY_RELEASE_TOKEN, SENTRY_URL, VERSION_FILE
 )

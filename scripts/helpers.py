@@ -34,15 +34,6 @@ def run_remote_commands(commands: list[str]):
     if p.stdout:
         print(p.stdout)
 
-def print_status(msg: str):
-    print(f"\033[0;32m{msg}\033[0m")
-
-def print_warning(msg: str):
-    print(f"\033[0;33m{msg}\033[0m")
-
-def print_error(msg: str):
-    print(f"\033[0;31m{msg}\033[0m")
-
 def envsubst(from_file: str, to_file: str, variables: list[str] = []):
     if variables:
         variables_str = f"'{",".join([f'${var}' for var in variables])}'"

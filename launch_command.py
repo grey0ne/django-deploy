@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass
-from scripts.helpers import print_status
+from scripts.printing import print_status
 from scripts.do_init import init_do_infra
 from scripts.commands import (
     setup_balancer, update_dev_nginx, production_setup, create_s3_backup,

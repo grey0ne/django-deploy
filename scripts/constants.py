@@ -21,6 +21,7 @@ SSL_CERTS_DIR = get_config_value("SSL_CERTS_DIR")
 DOCKER_IMAGE_PREFIX = f'{REGISTRY_HOSTNAME}/{REGISTRY_NAMESPACE}/{PROJECT_NAME}'
 DEPLOY_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(DEPLOY_DIR)
+BACKEND_DIR = os.path.join(PROJECT_DIR, 'backend')
 ENV_DIR = os.path.join(PROJECT_DIR, 'environment')
 COMPOSE_DIR = os.path.join(DEPLOY_DIR, 'compose')
 VERSION_FILE = os.path.join(ENV_DIR, 'version')
@@ -67,5 +68,10 @@ SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PR
 S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')
 S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID')
 S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
-S3_MEDIA_BUCKET = os.getenv('S3_MEDIA_BUCKET')
+S3_MEDIA_BUCKET = os.getenv('S3_MEDIA_BUCKET', f'{PROJECT_NAME}-media')
 S3_ACL = os.getenv('S3_ACL', 'private')
+
+S3_STATIC_BUCKET = os.getenv('S3_STATIC_BUCKET', f'{PROJECT_NAME}-static')
+
+COLLECTED_STATIC_DIR = os.path.join(BACKEND_DIR, 'collected_static')
+

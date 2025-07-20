@@ -1,6 +1,5 @@
 from scripts.constants import (
-    REGISTRY_PASSWORD, REGISTRY_HOSTNAME, REGISTRY_USERNAME,
-    DOCKER_IMAGE_PREFIX, PROD_APP_PATH, PROJECT_DOMAIN
+    REGISTRY_PASSWORD, REGISTRY_HOSTNAME, REGISTRY_USERNAME, PROJECT_DOMAIN
 )
 
 PRINT_COMMAND = """
@@ -40,14 +39,6 @@ else
     print_status "Initializing swarm"
     docker swarm init --advertise-addr $RESULT_ADDR
 fi
-"""
-
-PERFORM_MIGRATIONS = f"""
-{PRINT_COMMAND}
-print_status "Update django image for migrations"
-docker pull {DOCKER_IMAGE_PREFIX}-django
-print_status "Perform migrations"
-docker run --rm -i --env-file={PROD_APP_PATH}/env.base --env-file={PROD_APP_PATH}/env {DOCKER_IMAGE_PREFIX}-django python manage.py migrate
 """
 
 INIT_SWARM_SCRIPT = f"""

@@ -3,7 +3,8 @@ from scripts.constants import (
     BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR, NGINX_CONFIG_DIR,
     COMPOSE_PROFILES, SSL_CERTS_DIR, ENV_DIR
 )
-from scripts.helpers import run_command, print_status, run_remote_commands
+from scripts.helpers import run_command, run_remote_commands
+from scripts.printing import print_status
 from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT, GEN_FAKE_CERTS, SETUP_DOCKER
 import subprocess
 from subprocess import PIPE
@@ -70,9 +71,13 @@ def update_dev_nginx():
         copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/centrifugo_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf.template")
 
 def collect_static():
-    print_status("Collecting static files for django. Uploading static to S3")
+    print_status("Collecting static files for django")
     run_command(
         f"docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -e BUILD_STATIC=true -v ./backend:/app/src {PROJECT_NAME}-django python manage.py collectstatic --noinput"
+    )
+    print_status("Uploading static files to S3")
+    run_command(
+        f"docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -v ./backend:/app/src -v {PROJECT_DIR}/deploy:/app/deploy {PROJECT_NAME}-django python /app/deploy/scripts/collect_static.py"
     )
 
 def upload_images():
