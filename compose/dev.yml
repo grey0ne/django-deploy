@@ -80,14 +80,13 @@ services:
       - celery
 
   centrifugo:
-    image: "centrifugo/centrifugo:v5.4.9"
+    image: "centrifugo/centrifugo:v6.2"
     container_name: ${PROJECT_NAME}-centrifugo
     domainname: ${PROJECT_NAME}-centrifugo
-    volumes:
-      - ${PROJECT_DIR}/environment/centrifugo.json.dev:/centrifugo/centrifugo.json
-    command: centrifugo -c centrifugo.json --engine=redis
-    depends_on:
-      - redis
+    command: centrifugo
+    env_file:
+      - ${PROJECT_DIR}/environment/env.base
+      - ${PROJECT_DIR}/environment/env.dev
     networks:
       - app
       - devnet
@@ -106,7 +105,6 @@ services:
     profiles:
       - celery
       - centrifugo
-
 
 volumes:
   postgres-data:
