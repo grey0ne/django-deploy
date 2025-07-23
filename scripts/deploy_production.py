@@ -12,7 +12,7 @@ from scripts.constants import (
     DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE, COMPOSE_PROFILES
 )
 from scripts.release import update_sentry_release
-import os
+from scripts.docker_compose import render_production_compose_file
 
 
 def render_prod_nginx_conf(conf_name: str, target_name: str):
@@ -29,14 +29,13 @@ def deploy_production():
     login_registry()
     upload_images()
 
-    os.environ['DJANGO_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
-    os.environ['NEXTJS_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')
-
+    django_image = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
+    nextjs_image = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')
+    render_production_compose_file(django_image, nextjs_image)
     print_status(f"Deploying to {PROJECT_DOMAIN}")
     run_remote_commands([f"mkdir -p {PROD_APP_PATH}", f"mkdir -p {PROD_APP_PATH}/backend_data"])
     print_status(f"Copying compose files to {PROJECT_DOMAIN}")
 
-    envsubst(f'{COMPOSE_DIR}/prod.yml.template', f'{COMPOSE_DIR}/prod.yml')
     copy_to_remote(f'{COMPOSE_DIR}/prod.yml', f'{PROD_APP_PATH}/prod.yml')
     run_command(f"rm {COMPOSE_DIR}/prod.yml")
 
