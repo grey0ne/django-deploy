@@ -11,7 +11,7 @@ from scripts.constants import (
     DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR,
     DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE, COMPOSE_PROFILES
 )
-from scripts.release import update_sentry_release
+from scripts.release import release_version, update_version
 from scripts.docker_compose import render_production_compose_file
 
 
@@ -22,12 +22,15 @@ def render_prod_nginx_conf(conf_name: str, target_name: str):
 
 
 def deploy_production():
-    update_sentry_release()
+    new_version = update_version()
 
-    collect_static()
     build_images()
     login_registry()
     upload_images()
+
+    # Release version after build to avoid debug releases
+    release_version(new_version)
+    collect_static()
 
     django_image = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
     nextjs_image = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')

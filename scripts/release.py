@@ -36,11 +36,18 @@ def save_version(version: str):
         f.write(version)
     save_env_option('PROJECT_VERSION', str(version), create=True)
     save_env_option('NEXT_PUBLIC_VERSION', str(version), create=True)
+
+def commit_version(version: str):
     run_command(f'git commit environment/version -m "Version {version}"')
 
-def update_sentry_release():
+def update_version():
     current_version = read_version()
     next_version = increment_version(current_version)
     save_version(next_version)
-    print_status(f'Releasing version {next_version} of {PROJECT_NAME}')
-    sentry_release(next_version)
+    print_status(f'Version of {PROJECT_NAME} updated to {next_version}')
+    return next_version
+
+def release_version(version: str):
+    commit_version(version)
+    print_status(f'Releasing version {version} of {PROJECT_NAME}')
+    sentry_release(version)
