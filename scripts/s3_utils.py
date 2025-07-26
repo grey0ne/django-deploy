@@ -51,13 +51,19 @@ def download_dir(client: Any, dir: str, local_dir: str, bucket: str, verbose: bo
         print(f'Downloading file "{file_key}"')
         client.download_file(bucket, file_key, dest_pathname)
 
-def upload_dir(client: Any, dir: str, local_dir: str, bucket: str, verbose: bool = True):
+def upload_dir(
+    client: Any,
+    dir: str, local_dir: str, bucket: str,
+    verbose: bool = True, skip_existing: bool = True,
+    file_type: str | None = None
+):
     print_status(f'Uploading Directory "{local_dir}" to "{dir}" in bucket "{bucket}"')
     file_key_set: set[str] = set() 
-    for file_key in get_s3_files_list(client, dir, bucket, verbose):
-        file_key_set.add(file_key)
-    if verbose:
-        print_status(f'Found {len(file_key_set)} files in S3')
+    if skip_existing:
+        for file_key in get_s3_files_list(client, dir, bucket, verbose):
+            file_key_set.add(file_key)
+        if verbose:
+            print_status(f'Found {len(file_key_set)} files in S3')
     local_paths_list: list[tuple[str, str]] = []
     for root, _, files in os.walk(local_dir):
         for file in files:
@@ -70,10 +76,15 @@ def upload_dir(client: Any, dir: str, local_dir: str, bucket: str, verbose: bool
     counter = 0
     for local_path, s3_path in local_paths_list:
         counter += 1
-        if s3_path in file_key_set:
+        if skip_existing and s3_path in file_key_set:
             if verbose:
-                print(f'Skipping file "{s3_path}". Already exists')
+                print(f'Skipping file "{s3_path}". Already exists in S3')
             continue
+        if file_type is not None:
+            if not local_path.endswith(file_type):
+                if verbose:
+                    print(f'Skipping file "{local_path}". Not a {file_type} file')
+                continue
         mimetype = guess_type(local_path)[0]
         if verbose:
             print(f'{counter}/{total_files} Uploading {local_path} with type {mimetype} to {s3_path}')
@@ -102,7 +113,10 @@ def backup_s3(backup_path: str = S3_BACKUP_PATH):
     download_dir(client, '', os.path.join(backup_path, S3_MEDIA_BUCKET), S3_MEDIA_BUCKET)
 
 
-def upload_s3(backup_path: str = S3_BACKUP_PATH):
-    client = get_client()
-    upload_dir(client, '', os.path.join(backup_path, S3_MEDIA_BUCKET), S3_MEDIA_BUCKET)
+def upload_s3(backup_path: str = S3_BACKUP_PATH, skip_existing: bool = True, verbose: bool = True, file_type: str | None = None):
+    client = get_client(verbose=verbose)
+    upload_dir(
+        client=client, dir='', local_dir=os.path.join(backup_path, S3_MEDIA_BUCKET),
+        bucket=S3_MEDIA_BUCKET, skip_existing=skip_existing, verbose=verbose, file_type=file_type
+    )
 
