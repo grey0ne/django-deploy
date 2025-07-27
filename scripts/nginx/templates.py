@@ -115,7 +115,7 @@ server {
 }
 """
 
-NGINX_EXTRA_DOMAINS_TEMPLATE = """
+NGINX_EXTRA_DEV_DOMAINS_TEMPLATE = """
 server {
     listen 443 ssl;
     access_log /dev/stdout;
@@ -185,6 +185,151 @@ server {
     location / {
         set $centrifugo{PROJECT_NAME} {PROJECT_NAME}-centrifugo;
         proxy_pass http://$centrifugo{PROJECT_NAME}:8000;
+    }
+}
+"""
+
+CENTRIFUGO_PROD_TEMPLATE = """
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl;
+    
+    server_name centrifugo.{PROJECT_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/centrifugo.{PROJECT_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/centrifugo.{PROJECT_DOMAIN}/privkey.pem;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Scheme $scheme;
+    proxy_set_header Host $http_host;
+
+    resolver 127.0.0.11 valid=30s;
+
+    location /connection {
+        set $centrifugo{PROJECT_NAME} {PROJECT_NAME}-centrifugo;
+        proxy_pass http://$centrifugo{PROJECT_NAME}:8000;
+        proxy_http_version 1.1;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header Host $http_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    location / {
+        set $centrifugo{PROJECT_NAME} {PROJECT_NAME}-centrifugo;
+        proxy_pass http://$centrifugo{PROJECT_NAME}:8000;
+    }
+}
+"""
+
+APP_PROD_TEMPLATE = """
+server {
+    listen 80;
+    server_name {PROJECT_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    access_log /dev/stdout;
+
+    server_name {PROJECT_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/{PROJECT_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{PROJECT_DOMAIN}/privkey.pem;
+
+    client_max_body_size 50000k;
+
+    gzip on;
+    gzip_min_length 1000;
+    gzip_proxied any;
+    gzip_types text/css application/x-javascript;
+
+    # We need dynamic resolver in order to load nginx without upstreams.
+    # IP is valid for docker compose resolver
+    resolver 127.0.0.11 valid=30s;
+
+    location ~ ^/(admin|api|idp|login|complete|static|s)/ {
+        set $django{PROJECT_NAME} {PROJECT_NAME}-django;
+        proxy_pass http://$django{PROJECT_NAME}:8000;
+        proxy_buffer_size   128k;
+        proxy_buffers   4 256k;
+        proxy_connect_timeout       120;
+        proxy_send_timeout          120;
+        proxy_read_timeout          120;
+        send_timeout                120;
+        proxy_busy_buffers_size   256k;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto 'https';
+    }
+
+
+    location / {
+        set $nextjs{PROJECT_NAME} {PROJECT_NAME}-nextjs;
+        proxy_pass http://$nextjs{PROJECT_NAME}:3000;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto 'https';
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+"""
+
+
+EXTRA_DOMAIN_PROD_TEMPLATE = """
+    listen 443 ssl;
+    access_log /dev/stdout;
+
+    server_name {DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/{DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{DOMAIN}/privkey.pem;
+
+    client_max_body_size 50000k;
+
+    gzip on;
+    gzip_min_length 1000;
+    gzip_proxied any;
+    gzip_types text/css application/x-javascript;
+
+    # We need dynamic resolver in order to load nginx without upstreams.
+    # IP is valid for docker compose resolver
+    resolver 127.0.0.11 valid=30s;
+
+    location / {
+        set $django{PROJECT_NAME} {PROJECT_NAME}-django;
+        proxy_pass http://$django{PROJECT_NAME}:8000;
+        proxy_buffer_size   128k;
+        proxy_buffers   4 256k;
+        proxy_connect_timeout       120;
+        proxy_send_timeout          120;
+        proxy_read_timeout          120;
+        send_timeout                120;
+        proxy_busy_buffers_size   256k;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto 'https';
     }
 }
 """

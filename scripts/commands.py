@@ -7,7 +7,7 @@ from scripts.helpers import run_command, run_remote_commands
 from scripts.printing import print_status
 from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT, GEN_FAKE_CERTS, SETUP_DOCKER
 from scripts.nginx.configuration import (
-    render_dev_nginx_conf, render_centrifugo_dev_nginx_conf, render_extra_domain_nginx_conf
+    render_dev_nginx_conf, render_centrifugo_dev_nginx_conf, render_extra_dev_domain_nginx_conf
 )
 import subprocess
 from subprocess import PIPE
@@ -68,7 +68,7 @@ def update_dev_nginx():
     if "centrifugo" in COMPOSE_PROFILES:
         render_centrifugo_dev_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf.template")
     for domain in EXTRA_DOMAINS:
-        render_extra_domain_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_{domain}.conf.template", domain)
+        render_extra_dev_domain_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_{domain}.conf.template", domain)
 
 def collect_static():
     print_status("Collecting static files for django")
@@ -138,6 +138,7 @@ def generate_dev_certs():
 
 
 def setup_prod_domain_cert(domain: str):
+    print_status(f"Setting up certbot for domain {domain}")
     SETUP_CERTBOT_COMMAND = f"""
     CERTS_VOLUME=/app/certbot/certificates
     CHALLENGE_VOLUME=/app/certbot/challenge
@@ -146,18 +147,23 @@ def setup_prod_domain_cert(domain: str):
     run_remote_commands([ SETUP_CERTBOT_COMMAND, ])
 
 
-def production_setup():
-    print_status("Setting up docker")
-    run_remote_commands([ SETUP_DOCKER, ])
-    setup_balancer()
-    print_status(f"Setting up certbot for domain {PROJECT_DOMAIN}")
+def setup_prod_certs():
     run_remote_commands([
         f"mkdir -p /app/certbot/certificates",
         f"mkdir -p /app/certbot/challenge",
     ])
     setup_prod_domain_cert(PROJECT_DOMAIN)
+    for domain in EXTRA_DOMAINS:
+        setup_prod_domain_cert(domain)
     if "centrifugo" in COMPOSE_PROFILES:
         setup_prod_domain_cert(f"centrifugo.{PROJECT_DOMAIN}")
+
     print_status(f"Copying fake certs to dummy folder")
     run_remote_commands([ GEN_FAKE_CERTS, ])
     reload_prod_nginx()
+
+def production_setup():
+    print_status("Setting up docker")
+    run_remote_commands([ SETUP_DOCKER, ])
+    setup_balancer()
+    setup_prod_certs()

@@ -20,6 +20,22 @@ if [ -f "$PROJECT_DIR/.env" ]; then
     source $PROJECT_DIR/.env
 fi
 
+is_in_list() {
+    local target="$1"
+    shift
+    local list=("$@")
+
+    for item in "${list[@]}"; do
+        if [[ "$item" == "$target" ]]; then
+            return 0
+        fi
+    done
+
+    return 1  # false
+}
+
+PROD_COMMANDS=("initprod" "deploybalancer" "deployprod" "s3backupprod" "s3restoreprod")
+
 PROD_DIR="/app/$PROJECT_NAME"
 DOCKER_IMAGE_PREFIX="$REGISTRY_HOSTNAME/$REGISTRY_NAMESPACE/$PROJECT_NAME"
 
@@ -76,7 +92,7 @@ elif [ $1 = "logsprod" ]; then
 elif [ $1 = "gencerts" ]; then
     python3 $DEPLOY_DIR/generate_dev_certificates.py
     $BALANCER_COMPOSE restart
-elif [ $1 = "initinfra" ] || [ $1 = "initprod" ] || [ $1 = "deploybalancer" ] || [ $1 = "deployprod" ] || [ $1 = "s3backupdev" ] || [ $1 = "s3restoredev" ] || [ $1 = "s3backupprod" ] || [ $1 = "s3restoreprod" ]; then
+elif is_in_list $1 "${PROD_COMMANDS[@]}"; then
     source $PROD_ENV
     python3 $DEPLOY_DIR/launch_command.py $1
 elif [ $1 = "updatetemplate" ]; then
