@@ -43,7 +43,7 @@ server {
         proxy_busy_buffers_size   256k;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Scheme $scheme;
-        proxy_set_header Host $http_host;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto 'https';
     }
 

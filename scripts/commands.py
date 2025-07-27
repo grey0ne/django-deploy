@@ -1,11 +1,14 @@
 from scripts.constants import (
     PROJECT_DOMAIN, COMPOSE_DIR, DEPLOY_DIR, DOCKER_IMAGE_PREFIX,
     BASE_ENV_FILE, PROD_ENV_FILE, PROJECT_NAME, PROJECT_DIR, NGINX_CONFIG_DIR,
-    COMPOSE_PROFILES, SSL_CERTS_DIR, ENV_DIR
+    COMPOSE_PROFILES, SSL_CERTS_DIR, ENV_DIR, EXTRA_DOMAINS
 )
 from scripts.helpers import run_command, run_remote_commands
 from scripts.printing import print_status
 from scripts.shell_commands import RELOAD_NGINX, LOGIN_REGISTRY_SCRIPT, GEN_FAKE_CERTS, SETUP_DOCKER
+from scripts.nginx.configuration import (
+    render_dev_nginx_conf, render_centrifugo_dev_nginx_conf, render_extra_domain_nginx_conf
+)
 import subprocess
 from subprocess import PIPE
 
@@ -56,19 +59,16 @@ def setup_balancer():
     update_swarm('/app/balancer/compose.yml', 'balancer')
     reload_prod_nginx()
 
-def copy_nginx_config(from_path: str, to_path: str):
-    print_status(f"Copying {from_path} to {to_path}")
-    run_command(
-        f"envsubst '$PROJECT_NAME,$PROJECT_DOMAIN' < {from_path} > {to_path}"
-    )
 
 def update_dev_nginx():
     run_command(
         f"mkdir -p {NGINX_CONFIG_DIR}"
     )
-    copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/nginx_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}.conf.template")
+    render_dev_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}.conf.template")
     if "centrifugo" in COMPOSE_PROFILES:
-        copy_nginx_config(f"{DEPLOY_DIR}/nginx/conf/centrifugo_dev.template", f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf.template")
+        render_centrifugo_dev_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_centrifugo.conf.template")
+    for domain in EXTRA_DOMAINS:
+        render_extra_domain_nginx_conf(f"{NGINX_CONFIG_DIR}/{PROJECT_NAME}_{domain}.conf.template", domain)
 
 def collect_static():
     print_status("Collecting static files for django")
@@ -126,6 +126,11 @@ def generate_dev_certs():
     add_cert_to_trusted(f"{SSL_CERTS_DIR}/media_{PROJECT_NAME}.crt")
     update_hosts(PROJECT_DOMAIN)
     update_hosts(f"media.{PROJECT_DOMAIN}")
+    for domain in EXTRA_DOMAINS:
+        cert_name = f"{PROJECT_NAME}_{domain}"
+        gen_cert(cert_name, domain)
+        add_cert_to_trusted(f"{SSL_CERTS_DIR}/{cert_name}.crt")
+        update_hosts(domain)
     if "centrifugo" in COMPOSE_PROFILES:
         gen_cert(f"centrifugo_{PROJECT_NAME}", f"centrifugo.{PROJECT_DOMAIN}")
         add_cert_to_trusted(f"{SSL_CERTS_DIR}/centrifugo_{PROJECT_NAME}.crt")

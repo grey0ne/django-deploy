@@ -10,13 +10,17 @@ def get_config_value(key: str, default: str | None = None) -> str:
 
 PROJECT_DOMAIN = get_config_value("PROJECT_DOMAIN")
 PROJECT_NAME = get_config_value("PROJECT_NAME")
+
+extra_domains_str = get_config_value("EXTRA_DOMAINS", default='')
+EXTRA_DOMAINS: list[str] = extra_domains_str.split(',') if len(extra_domains_str) > 0 else []
+
 VERBOSE = os.getenv("VERBOSE", "false").lower() == "true"
 REGISTRY_USERNAME = os.getenv("REGISTRY_USERNAME")
 REGISTRY_PASSWORD = os.getenv("REGISTRY_PASSWORD")
 REGISTRY_HOSTNAME = os.getenv("REGISTRY_HOSTNAME")
 REGISTRY_NAMESPACE = os.getenv("REGISTRY_NAMESPACE")
 NGINX_CONFIG_DIR = get_config_value("NGINX_CONFIG_DIR")
-COMPOSE_PROFILES = os.getenv("COMPOSE_PROFILES", "")
+COMPOSE_PROFILES: list[str] = os.getenv("COMPOSE_PROFILES", "").split(',')
 SSL_CERTS_DIR = get_config_value("SSL_CERTS_DIR")
 DOCKER_IMAGE_PREFIX = f'{REGISTRY_HOSTNAME}/{REGISTRY_NAMESPACE}/{PROJECT_NAME}'
 DEPLOY_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,4 +78,5 @@ S3_ACL = os.getenv('S3_ACL', 'private')
 S3_STATIC_BUCKET = os.getenv('S3_STATIC_BUCKET', f'{PROJECT_NAME}-static')
 
 COLLECTED_STATIC_DIR = os.path.join(BACKEND_DIR, 'collected_static')
+
 
