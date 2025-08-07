@@ -298,6 +298,19 @@ server {
 
 EXTRA_DOMAIN_PROD_TEMPLATE = """
 server {
+    listen 80;
+    server_name {DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
     listen 443 ssl;
     access_log /dev/stdout;
 
