@@ -11,6 +11,7 @@ from scripts.nginx.configuration import (
 )
 import subprocess
 from subprocess import PIPE
+import os
 
 S3_BACKUP_COMMAND=f"docker run -it --rm -v {PROJECT_DIR}/backend:/app/src -v {PROJECT_DIR}/deploy:/app/deploy -v {PROJECT_DIR}/backup/s3_backup:/tmp/s3_backup --network {PROJECT_NAME} --env-file {ENV_DIR}/env.base"
 
@@ -98,7 +99,11 @@ def build_image(service: str, dockerfile: str, context: str):
 
 def build_images():
     build_image("django", f"{PROJECT_DIR}/backend/Dockerfile.prod", f"{PROJECT_DIR}/backend")
+    
+    # Nextjs build requires env file to hardcode NEXT_PUBLIC_* variables
+    create_next_public_env_file()
     build_image("nextjs", f"{PROJECT_DIR}/deploy/docker/Dockerfile.nextjsprod", f"{PROJECT_DIR}/spa")
+    run_command(f"rm {PROJECT_DIR}/spa/.env")
 
 
 def gen_cert(name:str, domain:str):
@@ -167,3 +172,21 @@ def production_setup():
     run_remote_commands([ SETUP_DOCKER, ])
     setup_balancer()
     setup_prod_certs()
+
+def create_next_public_env_file() -> None:
+    """
+    Gets all environment variables with prefix "NEXT_PUBLIC_" and writes them to "/spa/.env"
+    """
+    print_status("Creating .env file with NEXT_PUBLIC_ environment variables")
+    
+    # Get all environment variables with NEXT_PUBLIC_ prefix
+    next_public_vars: dict[str, str] = {}
+    for key, value in os.environ.items():
+        if key.startswith("NEXT_PUBLIC_"):
+            next_public_vars[key] = value
+    
+    # Write environment variables to /spa/.env
+    env_file_path = os.path.join(PROJECT_DIR, "spa", ".env")
+    with open(env_file_path, 'w') as f:
+        for key, value in next_public_vars.items():
+            f.write(f"{key}={value}\n")

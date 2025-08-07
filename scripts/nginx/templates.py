@@ -297,6 +297,7 @@ server {
 
 
 EXTRA_DOMAIN_PROD_TEMPLATE = """
+server {
     listen 443 ssl;
     access_log /dev/stdout;
 
