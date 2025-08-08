@@ -67,7 +67,7 @@ DO_HEADERS = {
 SENTRY_ORG = os.getenv('SENTRY_ORG', 'grey')
 SENTRY_URL = f'https://sentry.io/api/0/organizations/{SENTRY_ORG}/releases/'
 SENTRY_RELEASE_TOKEN = os.getenv('SENTRY_RELEASE_TOKEN')
-SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-django'))
+SENTRY_PROJECTS = str(os.getenv('SENTRY_PROJECTS', f'{PROJECT_NAME}-frontend,{PROJECT_NAME}-backend'))
 
 S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')
 S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID')
