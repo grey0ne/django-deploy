@@ -88,8 +88,11 @@ def upload_dir(
         mimetype = guess_type(local_path)[0]
         if verbose:
             print(f'{counter}/{total_files} Uploading {local_path} with type {mimetype} to {s3_path}')
+        extra_args = {'ACL': S3_ACL}
+        if mimetype is not None:
+            extra_args['ContentType'] = mimetype
         client.upload_file(
-            local_path, bucket, s3_path, ExtraArgs={'ACL': S3_ACL, 'ContentType': mimetype}
+            local_path, bucket, s3_path, ExtraArgs=extra_args
         )
 
 
