@@ -37,7 +37,7 @@ services:
 
   minio:
     command: server /data --console-address ":9001"
-    image: "minio/minio:latest"
+    image: "minio/minio:RELEASE.2025-09-07T16-13-09Z"
     container_name: ${PROJECT_NAME}-minio
     domainname: ${PROJECT_NAME}-minio
     environment:
