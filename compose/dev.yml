@@ -94,7 +94,7 @@ services:
       - centrifugo
 
   redis:
-    image: "redis:7.2.3"
+    image: "redis:8.2.2-alpine"
     container_name: ${PROJECT_NAME}-redis
     domainname: ${PROJECT_NAME}-redis
     volumes:

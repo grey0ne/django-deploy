@@ -53,7 +53,7 @@ CENTRIFUGO_SERVICE: str = \
 
 REDIS_SERVICE: str = \
 """  {PROJECT_NAME}-redis:
-    image: "redis:7.2.3"
+    image: "redis:8.2.2-alpine"
     networks:
       - prodnet
 """
