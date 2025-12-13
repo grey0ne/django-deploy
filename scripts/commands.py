@@ -98,7 +98,7 @@ def build_image(service: str, dockerfile: str, context: str):
     run_command(command)
 
 def build_images():
-    build_image("django", f"{PROJECT_DIR}/backend/Dockerfile.prod", f"{PROJECT_DIR}/backend")
+    build_image("django", f"{PROJECT_DIR}/deploy/docker/Dockerfile.djangoprod", f"{PROJECT_DIR}/backend")
     
     # Nextjs build requires env file to hardcode NEXT_PUBLIC_* variables
     create_next_public_env_file()
