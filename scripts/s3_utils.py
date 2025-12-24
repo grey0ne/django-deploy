@@ -1,10 +1,7 @@
 import os
 from typing import Any, Generator
 import boto3 # type: ignore
-from constants import (
-    S3_MEDIA_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_ACL,
-    PROJECT_NAME
-)
+from constants import project_env
 from mimetypes import guess_type
 from printing import print_status
 
@@ -33,9 +30,9 @@ def get_s3_files_list(client: Any, dir: str, bucket: str, verbose: bool) -> Gene
 
 def s3_create_bucket():
     client = get_client()
-    media_bucket = S3_MEDIA_BUCKET or f'{PROJECT_NAME}-media'
+    media_bucket = project_env.s3_media_bucket or f'{project_env.project_name}-media'
     client.create_bucket(
-        ACL=S3_ACL,
+        ACL=project_env.s3_acl,
         Bucket=media_bucket
     )
 
@@ -88,7 +85,7 @@ def upload_dir(
         mimetype = guess_type(local_path)[0]
         if verbose:
             print(f'{counter}/{total_files} Uploading {local_path} with type {mimetype} to {s3_path}')
-        extra_args = {'ACL': S3_ACL}
+        extra_args = {'ACL': project_env.s3_acl}
         if mimetype is not None:
             extra_args['ContentType'] = mimetype
         client.upload_file(
@@ -97,29 +94,29 @@ def upload_dir(
 
 
 def get_client(verbose: bool = True) -> Any:
-    endpoint_url = S3_ENDPOINT_URL or f'http://{PROJECT_NAME}-minio:9000'
+    endpoint_url = project_env.s3_endpoint_url or f'http://{project_env.project_name}-minio:9000'
     if verbose:
         print_status('Initiating S3 Client')
         print_status(f'S3 Endpoint {endpoint_url}')
-        print_status(f'S3 Key ID {S3_ACCESS_KEY_ID}')
-        print_status(f'ACL is {S3_ACL}')
+        print_status(f'S3 Key ID {project_env.s3_access_key_id}')
+        print_status(f'ACL is {project_env.s3_acl}')
     return boto3.client( # type: ignore
          service_name='s3',
          endpoint_url=endpoint_url,
-         aws_access_key_id=S3_ACCESS_KEY_ID,
-         aws_secret_access_key=S3_SECRET_KEY,
+         aws_access_key_id=project_env.s3_access_key_id,
+         aws_secret_access_key=project_env.s3_secret_key,
     )
 
 
 def backup_s3(backup_path: str = S3_BACKUP_PATH):
     client = get_client()
-    download_dir(client, '', os.path.join(backup_path, S3_MEDIA_BUCKET), S3_MEDIA_BUCKET)
+    download_dir(client, '', os.path.join(backup_path, project_env.s3_media_bucket), project_env.s3_media_bucket)
 
 
 def upload_s3(backup_path: str = S3_BACKUP_PATH, skip_existing: bool = True, verbose: bool = True, file_type: str | None = None):
     client = get_client(verbose=verbose)
     upload_dir(
-        client=client, dir='', local_dir=os.path.join(backup_path, S3_MEDIA_BUCKET),
-        bucket=S3_MEDIA_BUCKET, skip_existing=skip_existing, verbose=verbose, file_type=file_type
+        client=client, dir='', local_dir=os.path.join(backup_path, project_env.s3_media_bucket),
+        bucket=project_env.s3_media_bucket, skip_existing=skip_existing, verbose=verbose, file_type=file_type
     )
 

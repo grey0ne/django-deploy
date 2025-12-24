@@ -3,9 +3,8 @@ import time
 
 from scripts.http_request import request
 from scripts.constants import (
-    DO_HEADERS, DO_API_DOMAIN, DROPLETS_URL, DO_REGION, DROPLET_SIZE,
-    DROPLET_OS_IMAGE, SSH_FINGERPRINT, DROPLET_TAGS, PG_SIZE, PG_VERSION, PG_NODES_NUM,
-    STATUS_CHECK_INTERVAL
+    project_env, DO_API_DOMAIN, DROPLETS_URL, DROPLET_TAGS, PG_SIZE, PG_VERSION, PG_NODES_NUM,
+    STATUS_CHECK_INTERVAL, get_do_headers
 )
 
 
@@ -15,20 +14,20 @@ class DOException(Exception):
 
 
 def do_get_request(url: str) -> dict[str, Any]:
-    response = request(url=url, method="GET", headers=DO_HEADERS)
+    response = request(url=url, method="GET", headers=get_do_headers())
     if response.status != 200:
         raise DOException(f"DO request failed. URL {url} Status code: {response.status} Body: {response.body}")
     return response.json()
 
 
 def do_post_request(url: str, data: dict[str, Any] = {}) -> dict[str, Any]:
-    response = request(url=url, method="POST", headers=DO_HEADERS, data=data)
+    response = request(url=url, method="POST", headers=get_do_headers(), data=data)
     if response.status not in [202, 201, 200]:
         raise DOException(f"DO request failed. URL {url} Status code: {response.status} Body: {response.body}")
     return response.json()
 
 def do_put_request(url: str, data: dict[str, Any] = {}) -> dict[str, Any]:
-    response = request(url=url, method="PUT", headers=DO_HEADERS, data=data)
+    response = request(url=url, method="PUT", headers=get_do_headers(), data=data)
     if response.status not in [204, 202, 201, 200]:
         raise DOException(f"DO request failed. URL {url} Status code: {response.status} Body: {response.body}")
     return response.json()
@@ -66,10 +65,10 @@ def create_droplet(name: str, project_id: str) -> dict[str, Any]:
     url = DROPLETS_URL
     data: dict[str, Any] = {
         "name": name,
-        "region": DO_REGION,
-        "size": DROPLET_SIZE,
-        "image": DROPLET_OS_IMAGE,
-        "ssh_keys": [SSH_FINGERPRINT],
+        "region": project_env.do_region,
+        "size": project_env.do_droplet_size,
+        "image": project_env.do_droplet_os_image,
+        "ssh_keys": [project_env.do_ssh_fingerprint],
         "backups": False,
         "monitoring": True,
         "tags": DROPLET_TAGS,
@@ -120,7 +119,7 @@ def create_pg_cluster(name: str, project_id: str):
         "name": name,
         "engine": "pg",
         "num_nodes": PG_NODES_NUM,
-        "region": DO_REGION,
+        "region": project_env.do_region,
         "size": PG_SIZE,
         "version": PG_VERSION,
         "tags": ["auto-created"],

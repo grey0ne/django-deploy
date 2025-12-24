@@ -1,2 +1,5 @@
 #!/bin/sh
+
+# This script is a wrapper for the deploy/dc script.
+# It supposed to be copied to /usr/local/bin/pc and used as a shortcut for the deploy/dc script.
 ./deploy/dc "$@"
