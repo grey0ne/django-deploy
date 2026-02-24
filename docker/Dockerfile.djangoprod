@@ -1,0 +1,16 @@
+FROM python:3.13.5-slim
+
+ENV PYTHONUNBUFFERED=1
+ENV POETRY_VIRTUALENVS_CREATE=false
+
+WORKDIR /app
+COPY install-dependencies.sh /app/
+RUN apt-get update
+RUN bash /app/install-dependencies.sh
+COPY pyproject.toml /app/
+
+RUN python -mpip install --upgrade pip --root-user-action=ignore
+RUN python -mpip install poetry --root-user-action=ignore && poetry install --only main
+
+COPY . /app/src
+WORKDIR /app/src

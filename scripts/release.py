@@ -1,23 +1,22 @@
 from scripts.http_request import request
-from scripts.helpers import print_status, save_env_option, run_command, print_warning
-from scripts.constants import (
-    PROJECT_NAME, SENTRY_PROJECTS, SENTRY_RELEASE_TOKEN, SENTRY_URL, VERSION_FILE
-)
+from scripts.helpers import save_env_option, run_command
+from scripts.printing import print_status, print_warning
+from scripts.constants import project_env, VERSION_FILE
 
 def sentry_release(version: str):
-    if not SENTRY_RELEASE_TOKEN:
+    if not project_env.sentry_release_token:
         print_warning('SENTRY_RELEASE_TOKEN is not set. Skipping Sentry release.')
         return
-    print_status(f'Sending verion {version} to Sentry. Projects {SENTRY_PROJECTS.replace(",", ", ")}')
+    print_status(f'Sending verion {version} to Sentry. Projects {project_env.sentry_projects.replace(",", ", ")}')
     headers = {
-        'Authorization': f'Bearer {SENTRY_RELEASE_TOKEN}',
+        'Authorization': f'Bearer {project_env.sentry_release_token}',
     }
     request(
-        url=SENTRY_URL,
+        url=project_env.sentry_url,
         headers=headers,
         data={
             'version': version,
-            'projects': SENTRY_PROJECTS.split(',')
+            'projects': project_env.sentry_projects.split(',')
         },
         method='POST',
     )
@@ -35,11 +34,18 @@ def save_version(version: str):
         f.write(version)
     save_env_option('PROJECT_VERSION', str(version), create=True)
     save_env_option('NEXT_PUBLIC_VERSION', str(version), create=True)
+
+def commit_version(version: str):
     run_command(f'git commit environment/version -m "Version {version}"')
 
-def update_sentry_release():
+def update_version():
     current_version = read_version()
     next_version = increment_version(current_version)
     save_version(next_version)
-    print_status(f'Releasing version {next_version} of {PROJECT_NAME}')
-    sentry_release(next_version)
+    print_status(f'Version of {project_env.project_name} updated to {next_version}')
+    return next_version
+
+def release_version(version: str):
+    commit_version(version)
+    print_status(f'Releasing version {version} of {project_env.project_name}')
+    sentry_release(version)

@@ -7,6 +7,7 @@ services:
     container_name: ${PROJECT_NAME}-django
     build:
       context: ${PROJECT_DIR}/backend
+      dockerfile: ${PROJECT_DIR}/deploy/docker/Dockerfile.djangodev
     env_file:
       - ${PROJECT_DIR}/environment/env.base
       - ${PROJECT_DIR}/environment/env.dev
@@ -25,6 +26,7 @@ services:
     domainname: ${PROJECT_NAME}-nextjs
     build:
       context: ${PROJECT_DIR}/spa
+      dockerfile: ${PROJECT_DIR}/deploy/docker/Dockerfile.nextjsdev
     env_file:
       - ${PROJECT_DIR}/environment/env.base
       - ${PROJECT_DIR}/environment/env.dev
@@ -36,12 +38,12 @@ services:
 
   minio:
     command: server /data --console-address ":9001"
-    image: "minio/minio:latest"
+    image: "minio/minio:RELEASE.2025-09-07T16-13-09Z"
     container_name: ${PROJECT_NAME}-minio
     domainname: ${PROJECT_NAME}-minio
     environment:
-      MINIO_ROOT_USER: minio_${PROJECT_NAME}
-      MINIO_ROOT_PASSWORD: minio_${PROJECT_NAME}
+      MINIO_ROOT_USER: ${PROJECT_NAME}_minio
+      MINIO_ROOT_PASSWORD: ${PROJECT_NAME}_minio
     volumes:
       - minio-data:/data
     networks:
@@ -79,14 +81,13 @@ services:
       - celery
 
   centrifugo:
-    image: "centrifugo/centrifugo:v5.4.9"
+    image: "centrifugo/centrifugo:v6.2"
     container_name: ${PROJECT_NAME}-centrifugo
     domainname: ${PROJECT_NAME}-centrifugo
-    volumes:
-      - ${PROJECT_DIR}/dev-scripts/centrifugo.json.dev:/centrifugo/centrifugo.json
-    command: centrifugo -c centrifugo.json --engine=redis
-    depends_on:
-      - redis
+    command: centrifugo
+    env_file:
+      - ${PROJECT_DIR}/environment/env.base
+      - ${PROJECT_DIR}/environment/env.dev
     networks:
       - app
       - devnet
@@ -94,7 +95,7 @@ services:
       - centrifugo
 
   redis:
-    image: "redis:7.2.3"
+    image: "redis:8.2.2-alpine"
     container_name: ${PROJECT_NAME}-redis
     domainname: ${PROJECT_NAME}-redis
     volumes:
@@ -105,7 +106,6 @@ services:
     profiles:
       - celery
       - centrifugo
-
 
 volumes:
   postgres-data:

@@ -1,3 +1,7 @@
+"""
+HTTP Request based on urllib to get rid of external dependencies
+Used only in automation scripts
+"""
 from typing import Any, NamedTuple
 import urllib.parse
 import urllib.error

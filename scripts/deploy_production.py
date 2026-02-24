@@ -1,55 +1,81 @@
 from scripts.shell_commands import (
-    INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS, RELOAD_NGINX
+    get_init_swarm_script, RELOAD_NGINX
 )
 from scripts.commands import (
     copy_to_remote, get_image_hash, update_swarm,
     collect_static, upload_images, login_registry, build_images
 )
-from scripts.helpers import run_command, run_remote_commands, print_status, envsubst
+from scripts.helpers import run_command, run_remote_commands
+from scripts.printing import print_status
 from scripts.constants import (
-    DEPLOY_DIR, PROD_APP_PATH, PROJECT_DOMAIN, COMPOSE_DIR,
-    DOCKER_IMAGE_PREFIX, PROJECT_NAME, BASE_ENV_FILE, PROD_ENV_FILE, COMPOSE_PROFILES
+    project_env, get_docker_image_prefix, DEPLOY_DIR, COMPOSE_DIR, BASE_ENV_FILE, PROD_ENV_FILE
 )
-from scripts.release import update_sentry_release
-import os
+from scripts.release import release_version, update_version
+from scripts.docker_compose import render_production_compose_file
+from scripts.nginx.configuration import (
+    render_app_prod_nginx_conf, render_centrifugo_prod_nginx_conf, render_extra_domain_prod_nginx_conf
+)
 
-def render_prod_nginx_conf(conf_name: str, target_name: str):
-    envsubst(f'{DEPLOY_DIR}/nginx/conf/{conf_name}', f'{DEPLOY_DIR}/nginx/conf/{target_name}', ['PROJECT_NAME', 'PROJECT_DOMAIN'])
-    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{target_name}', f'/app/balancer/conf/{target_name}')
-    run_command(f"rm {DEPLOY_DIR}/nginx/conf/{target_name}")
+
+def app_prod_nginx_conf():
+    render_app_prod_nginx_conf(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}.conf')
+    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}.conf', f'/app/balancer/conf/{project_env.project_name}.conf')
+    run_command(f"rm {DEPLOY_DIR}/nginx/conf/{project_env.project_name}.conf")
+
+def centrifugo_prod_nginx_conf():
+    render_centrifugo_prod_nginx_conf(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}_centrifugo.conf')
+    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}_centrifugo.conf', f'/app/balancer/conf/{project_env.project_name}_centrifugo.conf')
+    run_command(f"rm {DEPLOY_DIR}/nginx/conf/{project_env.project_name}_centrifugo.conf")
+
+def extra_domain_prod_nginx_conf(domain: str):
+    render_extra_domain_prod_nginx_conf(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}_{domain}.conf', domain)
+    copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/{project_env.project_name}_{domain}.conf', f'/app/balancer/conf/{project_env.project_name}_{domain}.conf')
+    run_command(f"rm {DEPLOY_DIR}/nginx/conf/{project_env.project_name}_{domain}.conf")
+
+
+def update_prod_nginx():
+    print_status(f"Copying nginx config to {project_env.project_domain}")
+    app_prod_nginx_conf()
+    if "centrifugo" in project_env.compose_profiles:
+        centrifugo_prod_nginx_conf()
+    for domain in project_env.extra_domains:
+        extra_domain_prod_nginx_conf(domain)
+
+    print_status("Reloading nginx")
+    run_remote_commands([RELOAD_NGINX, ])
 
 
 def deploy_production():
-    update_sentry_release()
+    new_version = update_version()
 
-    collect_static()
     build_images()
     login_registry()
     upload_images()
 
-    os.environ['DJANGO_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-django')
-    os.environ['NEXTJS_IMAGE'] = get_image_hash(f'{DOCKER_IMAGE_PREFIX}-nextjs')
+    # Release version after build to avoid debug releases
+    release_version(new_version)
+    collect_static()
 
-    print_status(f"Deploying to {PROJECT_DOMAIN}")
-    run_remote_commands([f"mkdir -p {PROD_APP_PATH}", f"mkdir -p {PROD_APP_PATH}/backend_data"])
-    print_status(f"Copying compose files to {PROJECT_DOMAIN}")
+    django_image = get_image_hash(f'{get_docker_image_prefix()}-django')
+    nextjs_image = get_image_hash(f'{get_docker_image_prefix()}-nextjs')
+    render_production_compose_file(django_image, nextjs_image)
+    print_status(f"Deploying to {project_env.project_domain}")
+    run_remote_commands([f"mkdir -p {project_env.prod_app_path}", f"mkdir -p {project_env.prod_app_path}/backend_data"])
+    print_status(f"Copying compose files to {project_env.project_domain}")
 
-    envsubst(f'{COMPOSE_DIR}/prod.yml.template', f'{COMPOSE_DIR}/prod.yml')
-    copy_to_remote(f'{COMPOSE_DIR}/prod.yml', f'{PROD_APP_PATH}/prod.yml')
+    copy_to_remote(f'{COMPOSE_DIR}/prod.yml', f'{project_env.prod_app_path}/prod.yml')
     run_command(f"rm {COMPOSE_DIR}/prod.yml")
 
     copy_to_remote(f"{DEPLOY_DIR}/prod-scripts/certbot_renew.sh", "/etc/cron.daily")
 
-    print_status(f"Copying env files to {PROJECT_DOMAIN}")
-    copy_to_remote(BASE_ENV_FILE, f"{PROD_APP_PATH}/env.base")
-    copy_to_remote(PROD_ENV_FILE, f"{PROD_APP_PATH}/env")
-    run_remote_commands([INIT_SWARM_SCRIPT, PERFORM_MIGRATIONS])
-    update_swarm(f'{PROD_APP_PATH}/prod.yml', PROJECT_NAME)
+    print_status(f"Copying env files to {project_env.project_domain}")
+    copy_to_remote(BASE_ENV_FILE, f"{project_env.prod_app_path}/env.base")
+    copy_to_remote(PROD_ENV_FILE, f"{project_env.prod_app_path}/env")
+    run_remote_commands([get_init_swarm_script()])
+    print_status("Update django image for migrations")
+    run_remote_commands([f"docker pull {get_docker_image_prefix()}-django"])
+    print_status("Perform migrations")
+    run_remote_commands([f"docker run --rm -i --env-file={project_env.prod_app_path}/env.base --env-file={project_env.prod_app_path}/env {get_docker_image_prefix()}-django python manage.py migrate"])
+    update_swarm(f'{project_env.prod_app_path}/prod.yml', project_env.project_name)
 
-    print_status(f"Copying nginx config to {PROJECT_DOMAIN}")
-    render_prod_nginx_conf('nginx_prod.template', f'{PROJECT_NAME}.conf')
-    if "centrifugo" in COMPOSE_PROFILES:
-        render_prod_nginx_conf('centrifugo_prod.template', f'{PROJECT_NAME}_centrifugo.conf')
-
-    print_status("Reloading nginx")
-    run_remote_commands([RELOAD_NGINX, ])
+    update_prod_nginx()

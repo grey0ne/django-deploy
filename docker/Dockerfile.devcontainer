@@ -1,0 +1,24 @@
+FROM python:3.13.5-slim
+
+ARG username=greyone
+
+RUN useradd -ms /bin/bash $username
+
+COPY deploy/scripts/setup_node.sh /app/
+RUN apt update -y && apt upgrade -y && apt install git curl -y
+RUN bash /app/setup_node.sh
+
+RUN python -mpip install poetry
+
+ENV PYTHONUNBUFFERED=1
+ENV POETRY_VIRTUALENVS_CREATE=false
+
+WORKDIR /app
+
+COPY backend/pyproject.toml /app/
+RUN poetry install
+
+RUN chown -R greyone:greyone /app
+
+ENV NODE_ENV=development
+
