@@ -1,4 +1,4 @@
-from scripts.constants import PROJECT_NAME, DEPLOY_DIR, COMPOSE_PROFILES
+from scripts.constants import project_env, COMPOSE_DIR
 from scripts.printing import print_status
 import os
 
@@ -67,19 +67,19 @@ networks:
 """
 
 def render_production_compose_file(django_image: str, nextjs_image: str, django_worker_count: int = 2) -> None:
-    print_status(f"Rendering production compose file for {PROJECT_NAME} with profiles {COMPOSE_PROFILES}")
+    print_status(f"Rendering production compose file for {project_env.project_name} with profiles {project_env.compose_profiles}")
 
     compose_content = "services:\n"
-    compose_content += f"{DJANGO_SERVICE.format(PROJECT_NAME=PROJECT_NAME, DJANGO_IMAGE=django_image, DJANGO_WORKER_COUNT=django_worker_count)}\n"
-    compose_content += f"{NEXTJS_SERVICE.format(PROJECT_NAME=PROJECT_NAME, NEXTJS_IMAGE=nextjs_image)}\n"
+    compose_content += f"{DJANGO_SERVICE.format(PROJECT_NAME=project_env.project_name, DJANGO_IMAGE=django_image, DJANGO_WORKER_COUNT=django_worker_count)}\n"
+    compose_content += f"{NEXTJS_SERVICE.format(PROJECT_NAME=project_env.project_name, NEXTJS_IMAGE=nextjs_image)}\n"
 
-    if 'celery' in COMPOSE_PROFILES:
-        compose_content += f"{CELERY_SERVICE.format(PROJECT_NAME=PROJECT_NAME, DJANGO_IMAGE=django_image)}\n"
-    if 'centrifugo' in COMPOSE_PROFILES:
-        compose_content+=f"{CENTRIFUGO_SERVICE.format(PROJECT_NAME=PROJECT_NAME)}\n"
-    if 'celery' in COMPOSE_PROFILES or 'centrifugo' in COMPOSE_PROFILES:
-        compose_content+=f"{REDIS_SERVICE.format(PROJECT_NAME=PROJECT_NAME)}\n"
+    if 'celery' in project_env.compose_profiles:
+        compose_content += f"{CELERY_SERVICE.format(PROJECT_NAME=project_env.project_name, DJANGO_IMAGE=django_image)}\n"
+    if 'centrifugo' in project_env.compose_profiles:
+        compose_content+=f"{CENTRIFUGO_SERVICE.format(PROJECT_NAME=project_env.project_name)}\n"
+    if 'celery' in project_env.compose_profiles or 'centrifugo' in project_env.compose_profiles:
+        compose_content+=f"{REDIS_SERVICE.format(PROJECT_NAME=project_env.project_name)}\n"
 
     compose_content+=NETWORK_CONFIG
-    with open(os.path.join(DEPLOY_DIR, 'compose', 'prod.yml'), 'w') as f:
+    with open(os.path.join(COMPOSE_DIR, 'prod.yml'), 'w') as f:
         f.write(compose_content)

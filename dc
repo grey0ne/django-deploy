@@ -35,8 +35,7 @@ is_in_list() {
     return 1  # false
 }
 
-PROD_COMMANDS=("initprod" "deploybalancer" "deployprod" "s3backupprod" "s3restoreprod")
-DEV_COMMANDS=("s3backupdev" "s3restoredev" "s3createdevbucket")
+PY_COMMANDS=("initprod" "deploybalancer" "deployprod" "s3backupprod" "s3restoreprod" "s3backupdev" "s3restoredev" "s3createdevbucket" "update_dev_nginx")
 
 PROD_DIR="/app/$PROJECT_NAME"
 DOCKER_IMAGE_PREFIX="$REGISTRY_HOSTNAME/$REGISTRY_NAMESPACE/$PROJECT_NAME"
@@ -94,10 +93,7 @@ elif [ $1 = "logsprod" ]; then
 elif [ $1 = "gencerts" ]; then
     python3 $DEPLOY_DIR/generate_dev_certificates.py
     $BALANCER_COMPOSE restart
-elif is_in_list $1 "${PROD_COMMANDS[@]}"; then
-    source $PROD_ENV
-    python3 $DEPLOY_DIR/launch_command.py $1
-elif is_in_list $1 "${DEV_COMMANDS[@]}"; then
+elif is_in_list $1 "${PY_COMMANDS[@]}"; then
     python3 $DEPLOY_DIR/launch_command.py $1
 elif [ $1 = "updatetemplate" ]; then
     source $PROD_ENV

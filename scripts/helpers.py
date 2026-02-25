@@ -2,7 +2,7 @@ from subprocess import PIPE
 import subprocess
 import fileinput
 
-from scripts.constants import PROJECT_DOMAIN, PROD_ENV_FILE, VERBOSE
+from scripts.constants import project_env, PROD_ENV_FILE
 
 
 def save_env_option(option_name: str, value: str, env_file: str = PROD_ENV_FILE, create: bool = False):
@@ -25,9 +25,9 @@ def run_command(command: str):
     subprocess.run(command, shell=True, check=True)
 
 def run_remote_commands(commands: list[str]):
-    ssh_command = ['ssh', f'root@{PROJECT_DOMAIN}', "bash -s"]
+    ssh_command = ['ssh', f'root@{project_env.project_domain}', "bash -s"]
     command = "\n".join(commands)
-    if VERBOSE:
+    if project_env.verbose:
         for cmd in commands:
             print(f"Running command: {cmd}")
     p = subprocess.run(ssh_command, stdout=PIPE, input=command, encoding='utf8')

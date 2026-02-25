@@ -1,6 +1,4 @@
-from scripts.constants import (
-    REGISTRY_PASSWORD, REGISTRY_HOSTNAME, REGISTRY_USERNAME, PROJECT_DOMAIN
-)
+from scripts.constants import project_env
 
 PRINT_COMMAND = """
     GREEN='\033[0;32m'
@@ -26,11 +24,12 @@ do
 done
 """
 
-LOGIN_REGISTRY_SCRIPT = f"""
-{PRINT_COMMAND}
-print_status "Login to registry {REGISTRY_HOSTNAME}"
-echo {REGISTRY_PASSWORD} | docker login {REGISTRY_HOSTNAME} --username {REGISTRY_USERNAME} --password-stdin
-"""
+def get_login_registry_script() -> str:
+    return f"""
+        {PRINT_COMMAND}
+        print_status "Login to registry {project_env.registry_hostname}"
+        echo {project_env.registry_password} | docker login {project_env.registry_hostname} --username {project_env.registry_username} --password-stdin
+    """
 
 JOIN_SWARM = """
 if [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active" ]; then
@@ -41,21 +40,23 @@ else
 fi
 """
 
-INIT_SWARM_SCRIPT = f"""
-{PRINT_COMMAND}
-{GET_ADDR}
-{LOGIN_REGISTRY_SCRIPT}
-{JOIN_SWARM}
-"""
+def get_init_swarm_script() -> str:
+    return f"""
+        {PRINT_COMMAND}
+        {GET_ADDR}
+        {get_login_registry_script()}
+        {JOIN_SWARM}
+    """
 
 RELOAD_NGINX = f"""
 NGINX_CONTAINER=$(docker ps -q -f name=nginx)
 docker exec $NGINX_CONTAINER nginx -s reload
 """
 
-GEN_FAKE_CERTS = f"""
-cp -r /app/certbot/certificates/live/{PROJECT_DOMAIN} /app/certbot/certificates/live/dummy
-"""
+def get_gen_fake_certs_script() -> str:
+    return f"""
+        cp -r /app/certbot/certificates/live/{project_env.project_domain} /app/certbot/certificates/live/dummy
+    """
 
 SETUP_DOCKER = """
 if [ -x "$(command -v docker)" ]; then
