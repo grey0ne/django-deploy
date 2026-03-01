@@ -5,3 +5,6 @@ Scripts are folder structure dependant. It is expected that this repo is a submo
 All project configuration is located in env files in "environment" directory in the top level of project
 
 So the top level of project structure should contain backend, spa, deploy and environment folders
+
+Docker containers are defined in deploy module and generalized. But you may need some "per project" customization.
+Backend dependecies are handled by install-dependencies.sh script in backend folder
