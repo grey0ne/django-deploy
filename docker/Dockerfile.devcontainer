@@ -22,3 +22,6 @@ RUN chown -R greyone:greyone /app
 
 ENV NODE_ENV=development
 
+# Keep container running so the IDE can attach; default python:*-slim CMD is "python3" (REPL),
+# which can cause the devcontainer to hang when Cursor/VS Code tries to attach.
+CMD ["sleep", "infinity"]
