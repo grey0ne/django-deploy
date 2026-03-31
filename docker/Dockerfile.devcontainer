@@ -1,27 +1,37 @@
-FROM python:3.13.5-slim
+FROM python:3.13.12-slim
 
-ARG username=greyone
-
-RUN useradd -ms /bin/bash $username
-
-COPY deploy/scripts/setup_node.sh /app/
-RUN apt update -y && apt upgrade -y && apt install git curl -y
-RUN bash /app/setup_node.sh
-
-RUN python -mpip install poetry
-
+# Prevent apt/poetry from prompting (common cause of "hang" in rebuilds)
+ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
+
+COPY deploy/scripts/setup_node.sh /app/
+COPY backend/install-dependencies.sh /app/
+
+# apt upgrade can take many minutes and look like a hang; keep only update + install
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    git curl gcc locales \
+    && bash /app/install-dependencies.sh \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# NVM: non-interactive, avoid prompts; install Node (network step – can be slow but won't hang)
+ENV NVM_DIR=/root/.nvm
+ENV CI=1
+RUN bash /app/setup_node.sh
+
+RUN python -mpip install poetry --root-user-action=ignore
 
 WORKDIR /app
 
 COPY backend/pyproject.toml /app/
-RUN poetry install
-
-RUN chown -R greyone:greyone /app
-
-ENV NODE_ENV=development
+RUN poetry install --no-interaction --no-ansi
 
 # Keep container running so the IDE can attach; default python:*-slim CMD is "python3" (REPL),
 # which can cause the devcontainer to hang when Cursor/VS Code tries to attach.
+ENV NODE_ENV=development
+
 CMD ["sleep", "infinity"]
