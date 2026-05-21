@@ -104,9 +104,11 @@ project_env = read_env()
 
 def update_environment():
     global project_env
+    from scripts.deploy_config import reset_deploy_config
     new_env = read_env()
     for field in fields(Environment):
         setattr(project_env, field.name, getattr(new_env, field.name))
+    reset_deploy_config()
 
 def get_env() -> Environment:
     return project_env

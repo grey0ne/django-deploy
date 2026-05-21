@@ -1,4 +1,10 @@
-from scripts.constants import project_env, get_docker_image_prefix, DEPLOY_DIR, BACKEND_DIR, BASE_ENV_FILE, DEV_ENV_FILE, COMPOSE_DIR, PROD_ENV_FILE, SPA_DIR
+from scripts.constants import (
+    project_env, get_docker_image_prefix, DEPLOY_DIR, BACKEND_DIR, BASE_ENV_FILE,
+    DEV_ENV_FILE, COMPOSE_DIR, PROD_ENV_FILE, SPA_DIR,
+)
+from scripts.compose.renderer import render_prod_balancer_compose
+from scripts.compose.services import GENERATED_DIR
+from scripts.deploy_config import get_deploy_config
 from scripts.helpers import run_command, run_remote_commands
 from scripts.printing import print_status
 from scripts.shell_commands import RELOAD_NGINX, get_login_registry_script, get_gen_fake_certs_script, SETUP_DOCKER
@@ -47,12 +53,13 @@ def update_swarm(compose_file: str, stack_name: str):
     run_remote_commands(['docker image prune -f',])
 
 def setup_balancer():
+    render_prod_balancer_compose()
     print_status("Copying balancer files")
     run_remote_commands([
         f"mkdir -p /app/balancer",
         f"mkdir -p /app/balancer/conf",
     ])
-    copy_to_remote(f'{COMPOSE_DIR}/prod_balancer.yml', '/app/balancer/compose.yml')
+    copy_to_remote(f'{GENERATED_DIR}/prod_balancer.yml', '/app/balancer/compose.yml')
     copy_to_remote(f'{DEPLOY_DIR}/nginx/conf/balancer.conf', '/app/balancer/conf/default.conf')
     update_swarm('/app/balancer/compose.yml', 'balancer')
     reload_prod_nginx()
@@ -63,7 +70,7 @@ def update_dev_nginx():
         f"mkdir -p {project_env.nginx_config_dir}"
     )
     render_dev_nginx_conf(f"{project_env.nginx_config_dir}/{project_env.project_name}.conf.template")
-    if "centrifugo" in project_env.compose_profiles:
+    if get_deploy_config().centrifugo_enabled:
         render_centrifugo_dev_nginx_conf(f"{project_env.nginx_config_dir}/{project_env.project_name}_centrifugo.conf.template")
     for domain in project_env.extra_domains:
         render_extra_dev_domain_nginx_conf(f"{project_env.nginx_config_dir}/{project_env.project_name}_{domain}.conf.template", domain)
@@ -133,7 +140,7 @@ def generate_dev_certs():
         gen_cert(cert_name, domain)
         add_cert_to_trusted(f"{project_env.ssl_certs_dir}/{cert_name}.crt")
         update_hosts(domain)
-    if "centrifugo" in project_env.compose_profiles:
+    if get_deploy_config().centrifugo_enabled:
         gen_cert(f"centrifugo_{project_env.project_name}", f"centrifugo.{project_env.project_domain}")
         add_cert_to_trusted(f"{project_env.ssl_certs_dir}/centrifugo_{project_env.project_name}.crt")
         update_hosts(f"centrifugo.{project_env.project_domain}")
@@ -157,7 +164,7 @@ def setup_prod_certs():
     setup_prod_domain_cert(project_env.project_domain)
     for domain in project_env.extra_domains:
         setup_prod_domain_cert(domain)
-    if "centrifugo" in project_env.compose_profiles:
+    if get_deploy_config().centrifugo_enabled:
         setup_prod_domain_cert(f"centrifugo.{project_env.project_domain}")
 
     print_status(f"Copying fake certs to dummy folder")

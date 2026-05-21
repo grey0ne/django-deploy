@@ -8,8 +8,9 @@ from scripts.commands import (
 from scripts.helpers import run_command, run_remote_commands
 from scripts.printing import print_status
 from scripts.constants import (
-    project_env, get_docker_image_prefix, DEPLOY_DIR, COMPOSE_DIR, BASE_ENV_FILE, PROD_ENV_FILE
+    project_env, get_docker_image_prefix, DEPLOY_DIR, COMPOSE_DIR, BASE_ENV_FILE, PROD_ENV_FILE,
 )
+from scripts.deploy_config import get_deploy_config
 from scripts.release import release_version, update_version
 from scripts.docker_compose import render_production_compose_file
 from scripts.nginx.configuration import (
@@ -36,7 +37,7 @@ def extra_domain_prod_nginx_conf(domain: str):
 def update_prod_nginx():
     print_status(f"Copying nginx config to {project_env.project_domain}")
     app_prod_nginx_conf()
-    if "centrifugo" in project_env.compose_profiles:
+    if get_deploy_config().centrifugo_enabled:
         centrifugo_prod_nginx_conf()
     for domain in project_env.extra_domains:
         extra_domain_prod_nginx_conf(domain)
