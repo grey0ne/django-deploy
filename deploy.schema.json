@@ -3,6 +3,10 @@
   "title": "Deploy configuration",
   "type": "object",
   "properties": {
+    "stack": {
+      "type": "string",
+      "enum": ["django_nextjs", "fastapi"]
+    },
     "services": {
       "type": "object",
       "properties": {
@@ -38,6 +42,12 @@
       }
     },
     "django": {
+      "type": "object",
+      "properties": {
+        "worker_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "fastapi": {
       "type": "object",
       "properties": {
         "worker_count": { "type": "integer", "minimum": 1 }

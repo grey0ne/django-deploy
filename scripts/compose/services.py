@@ -53,6 +53,25 @@ def dev_django_service() -> dict:
     return service
 
 
+def dev_fastapi_service() -> dict:
+    name = project_env.project_name
+    return {
+        'domainname': f'{name}-fastapi',
+        'image': f'{name}-fastapi',
+        'container_name': f'{name}-fastapi',
+        'build': {
+            'context': PROJECT_DIR,
+            'dockerfile': f'{PROJECT_DIR}/deploy/docker/Dockerfile.fastapidev',
+        },
+        'env_file': _env_files_dev(),
+        'volumes': [
+            f'{PROJECT_DIR}/proxy:/deps/proxy',
+            f'{PROJECT_DIR}/shared:/deps/shared',
+        ],
+        'networks': ['app', 'devnet'],
+    }
+
+
 def dev_nextjs_service() -> dict:
     name = project_env.project_name
     return {
@@ -156,6 +175,21 @@ def prod_django_service(django_image: str, worker_count: int) -> dict:
     }
 
 
+def prod_fastapi_service(fastapi_image: str, worker_count: int) -> dict:
+    name = project_env.project_name
+    return {
+        f'{name}-fastapi': {
+            'image': fastapi_image,
+            'command': (
+                f'uvicorn proxy.main:create_app --factory '
+                f'--host 0.0.0.0 --port 8080 --workers {worker_count}'
+            ),
+            'networks': ['prodnet'],
+            'env_file': _env_files_prod(),
+        },
+    }
+
+
 def prod_nextjs_service(nextjs_image: str) -> dict:
     name = project_env.project_name
     return {
@@ -203,16 +237,11 @@ def prod_redis_service() -> dict:
     }
 
 
-def build_dev_compose(config: DeployConfig) -> dict:
-    name = project_env.project_name
-    services: dict = {
-        'django': dev_django_service(),
-        'nextjs': dev_nextjs_service(),
-    }
-
+def _build_dev_optional_services(config: DeployConfig, services: dict) -> None:
     if config.dev_includes_optional('postgres'):
         services['postgres'] = dev_postgres_service()
-        services['django']['depends_on'] = ['postgres']
+        if 'django' in services:
+            services['django']['depends_on'] = ['postgres']
 
     if config.dev_includes_optional('minio'):
         services['minio'] = dev_minio_service()
@@ -226,6 +255,20 @@ def build_dev_compose(config: DeployConfig) -> dict:
     if config.dev_includes_optional('redis'):
         services['redis'] = dev_redis_service()
 
+
+def build_dev_compose(config: DeployConfig) -> dict:
+    name = project_env.project_name
+
+    if config.is_fastapi:
+        services: dict = {'fastapi': dev_fastapi_service()}
+    else:
+        services = {
+            'django': dev_django_service(),
+            'nextjs': dev_nextjs_service(),
+        }
+
+    _build_dev_optional_services(config, services)
+
     volumes: dict = {}
     if config.postgres_enabled:
         volumes['postgres-data'] = {
@@ -237,7 +280,7 @@ def build_dev_compose(config: DeployConfig) -> dict:
             'driver': 'local',
             'name': f'{name}-minio-data',
         }
-    if config.needs_redis() or config.legacy_dev_optionals:
+    if config.needs_redis():
         volumes['redis-data'] = {
             'driver': 'local',
             'name': f'{name}-redis-data',
@@ -256,12 +299,19 @@ def build_dev_compose(config: DeployConfig) -> dict:
 
 def build_prod_compose(
     config: DeployConfig,
-    django_image: str,
-    nextjs_image: str,
+    django_image: str = '',
+    nextjs_image: str = '',
+    fastapi_image: str = '',
 ) -> dict:
     services: dict = {}
-    services.update(prod_django_service(django_image, config.django_worker_count))
-    services.update(prod_nextjs_service(nextjs_image))
+
+    if config.is_fastapi:
+        services.update(
+            prod_fastapi_service(fastapi_image, config.fastapi_worker_count)
+        )
+    else:
+        services.update(prod_django_service(django_image, config.django_worker_count))
+        services.update(prod_nextjs_service(nextjs_image))
 
     if config.celery_enabled:
         services.update(prod_celery_service(django_image))

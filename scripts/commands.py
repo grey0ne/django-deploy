@@ -1,6 +1,6 @@
 from scripts.constants import (
-    project_env, get_docker_image_prefix, DEPLOY_DIR, BACKEND_DIR, BASE_ENV_FILE,
-    DEV_ENV_FILE, COMPOSE_DIR, PROD_ENV_FILE, SPA_DIR,
+    project_env, get_docker_image_prefix, DEPLOY_DIR, BACKEND_DIR, FASTAPI_DIR,
+    BASE_ENV_FILE, DEV_ENV_FILE, COMPOSE_DIR, PROD_ENV_FILE, SPA_DIR,
 )
 from scripts.compose.renderer import render_prod_balancer_compose
 from scripts.compose.services import GENERATED_DIR
@@ -76,6 +76,8 @@ def update_dev_nginx():
         render_extra_dev_domain_nginx_conf(f"{project_env.nginx_config_dir}/{project_env.project_name}_{domain}.conf.template", domain)
 
 def collect_static():
+    if get_deploy_config().is_fastapi:
+        return
     print_status("Collecting static files for django")
     run_command(
         f"docker run --rm -i --env-file={BASE_ENV_FILE} --env-file={PROD_ENV_FILE} -e BUILD_STATIC=true -v ./backend:/app/src {project_env.project_name}-django python manage.py collectstatic --noinput"
@@ -87,6 +89,10 @@ def collect_static():
 
 def upload_images():
     print_status("Uploading images to registry")
+    config = get_deploy_config()
+    if config.is_fastapi:
+        run_command(f"docker push {get_docker_image_prefix()}-fastapi")
+        return
     run_command(f"docker push {get_docker_image_prefix()}-django")
     run_command(f"docker push {get_docker_image_prefix()}-nextjs")
 
@@ -102,8 +108,16 @@ def build_image(service: str, dockerfile: str, context: str):
     run_command(command)
 
 def build_images():
+    config = get_deploy_config()
+    if config.is_fastapi:
+        build_image(
+            "fastapi",
+            f"{DEPLOY_DIR}/docker/Dockerfile.fastapiprod",
+            FASTAPI_DIR,
+        )
+        return
     build_image("django", f"{DEPLOY_DIR}/docker/Dockerfile.djangoprod", BACKEND_DIR)
-    
+
     # Nextjs build requires env file to hardcode NEXT_PUBLIC_* variables
     create_next_public_env_file()
     build_image("nextjs", f"{DEPLOY_DIR}/docker/Dockerfile.nextjsprod", SPA_DIR)
@@ -129,12 +143,14 @@ def update_hosts(domain: str):
     )
 
 def generate_dev_certs():
+    config = get_deploy_config()
     gen_cert(project_env.project_name, project_env.project_domain)
-    gen_cert(f"media_{project_env.project_name}", f"media.{project_env.project_domain}")
     add_cert_to_trusted(f"{project_env.ssl_certs_dir}/{project_env.project_name}.crt")
-    add_cert_to_trusted(f"{project_env.ssl_certs_dir}/media_{project_env.project_name}.crt")
     update_hosts(project_env.project_domain)
-    update_hosts(f"media.{project_env.project_domain}")
+    if not config.is_fastapi:
+        gen_cert(f"media_{project_env.project_name}", f"media.{project_env.project_domain}")
+        add_cert_to_trusted(f"{project_env.ssl_certs_dir}/media_{project_env.project_name}.crt")
+        update_hosts(f"media.{project_env.project_domain}")
     for domain in project_env.extra_domains:
         cert_name = f"{project_env.project_name}_{domain}"
         gen_cert(cert_name, domain)

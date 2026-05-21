@@ -1,8 +1,8 @@
 # django-deploy
 
-Scripts for automating deploy of django + nextjs based projects.
+Scripts for automating deploy of django + nextjs or fastapi projects.
 
-This repo is expected to be a **git submodule** at `deploy/` in the project repo. The project root should contain `backend/`, `spa/`, `deploy/`, `environment/`, and **`deploy.json`**.
+This repo is expected to be a **git submodule** at `deploy/` in the project repo. The project root should contain `deploy/`, `environment/`, and **`deploy.json`**. Django stacks also need `backend/` and `spa/`; FastAPI stacks use the repo root as the Python package context.
 
 ## Configuration
 
@@ -13,10 +13,11 @@ This repo is expected to be a **git submodule** at `deploy/` in the project repo
 | `environment/env.dev` | Development secrets and overrides |
 | `environment/env.prod` | Production secrets |
 
-### deploy.json example
+### deploy.json — django + nextjs (default stack)
 
 ```json
 {
+  "stack": "django_nextjs",
   "services": {
     "celery": { "enabled": false },
     "centrifugo": { "enabled": false }
@@ -31,11 +32,34 @@ This repo is expected to be a **git submodule** at `deploy/` in the project repo
 }
 ```
 
-- **services**: optional production (and dev) stack pieces. `redis` is added automatically when celery or centrifugo is enabled.
-- **dev**: local-only services (`postgres`, `minio`).
-- **django.worker_count**: gunicorn workers in production (falls back to `DJANGO_WORKER_COUNT` in `env.base` when omitted).
+### deploy.json — fastapi + nginx balancer
 
-If `deploy.json` is missing, dev compose includes celery/centrifugo/redis with compose **profiles** (legacy template behavior). Production includes only django and nextjs unless `COMPOSE_PROFILES` is set (deprecated; use `deploy.json`).
+```json
+{
+  "stack": "fastapi",
+  "services": {
+    "celery": { "enabled": false },
+    "centrifugo": { "enabled": false }
+  },
+  "dev": {
+    "postgres": { "enabled": false },
+    "minio": { "enabled": false }
+  },
+  "fastapi": {
+    "worker_count": 2
+  }
+}
+```
+
+- **stack**: `django_nextjs` (default) or `fastapi` (single backend behind nginx).
+- **services**: optional production (and dev) stack pieces. `redis` is added automatically when celery or centrifugo is enabled.
+- **dev**: local-only services (`postgres`, `minio`). Defaults to disabled for `fastapi` stack.
+- **django.worker_count**: gunicorn workers in production (falls back to `DJANGO_WORKER_COUNT`).
+- **fastapi.worker_count**: uvicorn workers in production (falls back to `FASTAPI_WORKER_COUNT`).
+
+**`deploy.json` is required** in the project root. Deploy scripts exit with a readable error if it is missing or contains invalid JSON.
+
+`COMPOSE_PROFILES` is deprecated; use `deploy.json` `services.*.enabled` instead.
 
 ## Docker Compose generation
 
@@ -53,4 +77,5 @@ Production `prod.yml` is generated during `deployprod` and copied to the server 
 
 ## Project layout
 
-Backend dependencies are installed via `install-dependencies.sh` in the backend folder.
+- **django_nextjs**: backend dependencies via `install-dependencies.sh` in `backend/`.
+- **fastapi**: `proxy/pyproject.toml` and `shared/pyproject.toml`; images install those packages via `Dockerfile.fastapidev` / `Dockerfile.fastapiprod`.

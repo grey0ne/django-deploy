@@ -5,6 +5,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 DEPLOY_DIR = os.path.join(PROJECT_DIR, 'deploy')
 ENV_DIR = os.path.join(PROJECT_DIR, 'environment')
 BACKEND_DIR = os.path.join(PROJECT_DIR, 'backend')
+FASTAPI_DIR = PROJECT_DIR
 COMPOSE_DIR = os.path.join(DEPLOY_DIR, 'compose')
 SPA_DIR = os.path.join(PROJECT_DIR, 'spa')
 VERSION_FILE = os.path.join(ENV_DIR, 'version')

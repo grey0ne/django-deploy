@@ -18,11 +18,24 @@ fi
 
 set +a
 
+require_deploy_json() {
+    if [ ! -f "$PROJECT_DIR/deploy.json" ]; then
+        echo "Error: deploy.json is required but was not found." >&2
+        echo "  Expected path: $PROJECT_DIR/deploy.json" >&2
+        echo "  Create deploy.json in the project root. See deploy/README.md for examples." >&2
+        exit 1
+    fi
+}
+
+require_deploy_json
+
 generate_compose_files() {
-    python3 "$DEPLOY_DIR/launch_command.py" generate_compose
+    PYTHONPATH="$DEPLOY_DIR" python3 "$DEPLOY_DIR/launch_command.py" generate_compose
 }
 
 generate_compose_files
+
+STACK=$(PYTHONPATH="$DEPLOY_DIR" python3 -c "from scripts.deploy_config import get_deploy_config; print(get_deploy_config().stack)")
 
 DEV_COMPOSE="docker-compose -f $GENERATED_COMPOSE_DIR/dev.yml --env-file=$ENV_DIR/env.base --env-file=$ENV_DIR/env.dev"
 BALANCER_COMPOSE="docker-compose -f $GENERATED_COMPOSE_DIR/dev_balancer.yml"
@@ -53,8 +66,12 @@ if [ $1 = "django" ]; then
     $DEV_COMPOSE run --rm django python manage.py "${@:2}"
 elif [ $1 = "rebuild" ]; then
     $DEV_COMPOSE down
-    $DEV_COMPOSE build nextjs django
-    $DEV_COMPOSE run --rm -i nextjs sh -c "rm -rf node_modules package-lock.json && npm install"
+    if [ "$STACK" = "fastapi" ]; then
+        $DEV_COMPOSE build fastapi
+    else
+        $DEV_COMPOSE build nextjs django
+        $DEV_COMPOSE run --rm -i nextjs sh -c "rm -rf node_modules package-lock.json && npm install"
+    fi
     $DEV_COMPOSE up -d
 elif [ $1 = "up" ]; then
     $BALANCER_COMPOSE up -d
@@ -62,7 +79,11 @@ elif [ $1 = "up" ]; then
 elif [ $1 = "sh" ]; then
     $DEV_COMPOSE exec $2 bash
 elif [ $1 = "test" ]; then
-    $DEV_COMPOSE run --rm django pytest
+    if [ "$STACK" = "fastapi" ]; then
+        $DEV_COMPOSE run --rm fastapi pytest
+    else
+        $DEV_COMPOSE run --rm django pytest
+    fi
 elif [ $1 = "format" ]; then
     $DEV_COMPOSE run --rm django sh -c 'isort . && black .'
 elif [ $1 = "tmux" ]; then
@@ -93,10 +114,15 @@ elif [ $1 = "deploystage" ]; then
     source $DEPLOY_DIR/env.stage
     $DEPLOY_DIR/deploy.sh $DEPLOY_DIR/env.stage
 elif [ $1 = "updatenginx" ]; then
-    python3 $DEPLOY_DIR/launch_command.py update_dev_nginx
+    PYTHONPATH="$DEPLOY_DIR" python3 $DEPLOY_DIR/launch_command.py update_dev_nginx
     $BALANCER_COMPOSE restart
 elif [ $1 = "nginx" ]; then
     $BALANCER_COMPOSE "${@:2}"
+elif [ $1 = "fastapiprod" ]; then
+    set -a
+    source $PROD_ENV
+    set +a
+    ssh root@$PROJECT_DOMAIN "docker run --rm -i --env-file=$PROD_DIR/env.base --env-file=$PROD_DIR/env $DOCKER_IMAGE_PREFIX-fastapi ${@:2}"
 elif [ $1 = "djangoprod" ]; then
     set -a
     source $PROD_ENV
@@ -111,7 +137,7 @@ elif [ $1 = "gencerts" ]; then
     python3 $DEPLOY_DIR/generate_dev_certificates.py
     $BALANCER_COMPOSE restart
 elif is_in_list $1 "${PY_COMMANDS[@]}"; then
-    python3 $DEPLOY_DIR/launch_command.py $1
+    PYTHONPATH="$DEPLOY_DIR" python3 $DEPLOY_DIR/launch_command.py $1
 elif [ $1 = "updatetemplate" ]; then
     set -a
     source $PROD_ENV
